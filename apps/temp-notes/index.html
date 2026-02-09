@@ -1,0 +1,442 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>BenOS • Scratchpad</title>
+  <style>
+    :root {
+      --bg: #0b0d10;
+      --panel: #11151b;
+      --panel2: #0f1318;
+      --text: #e6edf3;
+      --muted: #9aa4af;
+      --border: #243041;
+      --accent: #6ee7ff;
+      --danger: #ff6b6b;
+      --ok: #7ee787;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+    }
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: linear-gradient(to bottom, rgba(11,13,16,.95), rgba(11,13,16,.75));
+      backdrop-filter: blur(6px);
+      border-bottom: 1px solid var(--border);
+    }
+    .wrap { max-width: 980px; margin: 0 auto; padding: 14px 14px; }
+    .toprow {
+      display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+    }
+    .brand {
+      display: flex; align-items: baseline; gap: 10px; margin-right: auto;
+      font-family: var(--mono);
+    }
+    .brand b { color: var(--accent); }
+    .brand span { color: var(--muted); font-size: 12px; }
+    .btn {
+      border: 1px solid var(--border);
+      background: var(--panel);
+      color: var(--text);
+      padding: 8px 10px;
+      border-radius: 10px;
+      font-family: var(--mono);
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .btn:hover { border-color: #38506e; }
+    .btn.primary { border-color: #2a8aa0; }
+    .btn.danger { border-color: #7a2f2f; color: #ffd1d1; }
+    .btn:active { transform: translateY(1px); }
+    .search {
+      flex: 1 1 240px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid var(--border);
+      background: var(--panel2);
+      border-radius: 12px;
+      padding: 8px 10px;
+      font-family: var(--mono);
+      font-size: 12px;
+    }
+    .search input {
+      flex: 1;
+      background: transparent;
+      border: 0;
+      outline: 0;
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 12px;
+    }
+    .hint { color: var(--muted); font-size: 12px; font-family: var(--mono); }
+    main .wrap { padding-top: 10px; padding-bottom: 50px; }
+
+    .composer {
+      border: 1px solid var(--border);
+      background: var(--panel2);
+      border-radius: 14px;
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
+    .composer .bar {
+      display: flex; gap: 10px; align-items: center;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      font-family: var(--mono);
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .composer textarea {
+      width: 100%;
+      min-height: 110px;
+      resize: vertical;
+      border: 0;
+      outline: 0;
+      background: transparent;
+      color: var(--text);
+      padding: 12px;
+      font-family: var(--mono);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .list { display: grid; gap: 10px; }
+    .note {
+      border: 1px solid var(--border);
+      background: var(--panel);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+    .note .meta {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .pill {
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 2px 8px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .pill.pin { border-color: #2a8aa0; color: var(--accent); }
+    .meta .spacer { margin-left: auto; }
+    .note pre {
+      margin: 0;
+      padding: 12px;
+      font-family: var(--mono);
+      font-size: 13px;
+      line-height: 1.45;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .note .actions {
+      display: flex; gap: 8px; justify-content: flex-end;
+      padding: 10px 12px;
+      border-top: 1px solid var(--border);
+      background: rgba(0,0,0,.12);
+    }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 16px;
+      transform: translateX(-50%);
+      background: rgba(17,21,27,.92);
+      border: 1px solid var(--border);
+      padding: 10px 12px;
+      border-radius: 999px;
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--text);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .18s ease;
+    }
+    .toast.show { opacity: 1; }
+    kbd {
+      font-family: var(--mono);
+      border: 1px solid var(--border);
+      background: rgba(0,0,0,.25);
+      padding: 2px 6px;
+      border-radius: 8px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap toprow">
+      <div class="brand">
+        <b>BenOS</b><span>scratchpad</span>
+      </div>
+
+      <div class="search" title="Search notes (content + date)">
+        <span style="color:var(--muted)">/</span>
+        <input id="q" placeholder="search… (try: 09.02 or 'call' or 'schema')" />
+      </div>
+
+      <button class="btn primary" id="addBtn" title="Create note (Ctrl+Enter)">New note</button>
+      <button class="btn" id="clearBtn" title="Deletes ALL notes. No undo.">Nuke</button>
+      <div class="hint">Shortcuts: <kbd>Ctrl</kbd>+<kbd>Enter</kbd> new • <kbd>/</kbd> focus search</div>
+    </div>
+  </header>
+
+  <main>
+    <div class="wrap">
+      <section class="composer" aria-label="composer">
+        <div class="bar">
+          <span id="nowStamp"></span>
+          <span class="spacer"></span>
+          <span>Write a block. Hit <kbd>Ctrl</kbd>+<kbd>Enter</kbd> to save as a timestamped note.</span>
+        </div>
+        <textarea id="draft" spellcheck="false" placeholder="Dump thoughts here…"></textarea>
+      </section>
+
+      <section class="list" id="list"></section>
+    </div>
+  </main>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // BenOS Scratchpad v1 — timestamped blocks, local only.
+    const KEY = "benos:scratchpad:v1";
+    const $ = (id) => document.getElementById(id);
+
+    const q = $("q");
+    const draft = $("draft");
+    const list = $("list");
+    const nowStamp = $("nowStamp");
+    const toast = $("toast");
+
+    function uid() {
+      return Math.random().toString(16).slice(2) + Date.now().toString(16);
+    }
+
+    function pad(n){ return String(n).padStart(2,"0"); }
+    function fmtDate(d){
+      // "09.02.2026 22:14"
+      return `${pad(d.getDate())}.${pad(d.getMonth()+1)}.${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+    function fmtShort(d){
+      // "09.02" for quick scan/searchability
+      return `${pad(d.getDate())}.${pad(d.getMonth()+1)}`;
+    }
+
+    function load() {
+      try {
+        const raw = localStorage.getItem(KEY);
+        const data = raw ? JSON.parse(raw) : { notes: [] };
+        if (!Array.isArray(data.notes)) data.notes = [];
+        return data;
+      } catch {
+        return { notes: [] };
+      }
+    }
+
+    function save(data) {
+      localStorage.setItem(KEY, JSON.stringify(data));
+    }
+
+    function showToast(msg) {
+      toast.textContent = msg;
+      toast.classList.add("show");
+      clearTimeout(showToast._t);
+      showToast._t = setTimeout(()=>toast.classList.remove("show"), 900);
+    }
+
+    function addNote(text) {
+      const t = text.trimEnd();
+      if (!t.trim()) return;
+      const data = load();
+      const d = new Date();
+      data.notes.unshift({
+        id: uid(),
+        createdAt: d.toISOString(),
+        updatedAt: d.toISOString(),
+        pinned: false,
+        text: t
+      });
+      save(data);
+      draft.value = "";
+      render();
+      showToast("Saved");
+    }
+
+    function updateNote(id, patch) {
+      const data = load();
+      const n = data.notes.find(x => x.id === id);
+      if (!n) return;
+      Object.assign(n, patch, { updatedAt: new Date().toISOString() });
+      save(data);
+      render();
+    }
+
+    function deleteNote(id) {
+      const data = load();
+      data.notes = data.notes.filter(n => n.id !== id);
+      save(data);
+      render();
+      showToast("Deleted");
+    }
+
+    function clearAll() {
+      localStorage.removeItem(KEY);
+      render();
+      showToast("Nuked");
+    }
+
+    function matches(note, term) {
+      if (!term) return true;
+      const t = term.toLowerCase();
+      const created = new Date(note.createdAt);
+      const updated = new Date(note.updatedAt);
+      const hay = [
+        note.text,
+        fmtShort(created),
+        fmtDate(created),
+        fmtShort(updated),
+        fmtDate(updated)
+      ].join(" ").toLowerCase();
+      return hay.includes(t);
+    }
+
+    function sortedNotes(notes) {
+      // pinned first, then newest updated
+      return [...notes].sort((a,b) => {
+        if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
+        return new Date(b.updatedAt) - new Date(a.updatedAt);
+      });
+    }
+
+    function render() {
+      const data = load();
+      const term = q.value.trim();
+      const notes = sortedNotes(data.notes).filter(n => matches(n, term));
+
+      list.innerHTML = "";
+
+      if (notes.length === 0) {
+        const empty = document.createElement("div");
+        empty.className = "note";
+        empty.innerHTML = `
+          <div class="meta">
+            <span class="pill">empty</span>
+            <span class="spacer"></span>
+            <span>Tip: paste something, hit Ctrl+Enter</span>
+          </div>
+          <pre style="color:var(--muted)">No notes match. Try searching by date like "09.02" or a keyword.</pre>
+        `;
+        list.appendChild(empty);
+        return;
+      }
+
+      for (const n of notes) {
+        const created = new Date(n.createdAt);
+        const updated = new Date(n.updatedAt);
+
+        const el = document.createElement("article");
+        el.className = "note";
+
+        const title = n.text.split("\n")[0].slice(0, 90) || "(blank)";
+        const pinnedPill = n.pinned ? `<span class="pill pin">pinned</span>` : "";
+
+        el.innerHTML = `
+          <div class="meta" title="Hover shows exact timestamps">
+            ${pinnedPill}
+            <span class="pill" title="${fmtDate(created)}">+ ${fmtShort(created)}</span>
+            <span class="pill" title="${fmtDate(updated)}">~ ${fmtShort(updated)}</span>
+            <span class="spacer"></span>
+            <span title="${title}">${title.replace(/[<>&]/g, s => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[s]))}</span>
+          </div>
+          <pre></pre>
+          <div class="actions">
+            <button class="btn" data-act="copy">Copy</button>
+            <button class="btn" data-act="pin">${n.pinned ? "Unpin" : "Pin"}</button>
+            <button class="btn danger" data-act="del">Delete</button>
+          </div>
+        `;
+
+        el.querySelector("pre").textContent = n.text;
+
+        el.querySelector('[data-act="copy"]').addEventListener("click", async () => {
+          try {
+            await navigator.clipboard.writeText(n.text);
+            showToast("Copied");
+          } catch {
+            showToast("Clipboard blocked");
+          }
+        });
+
+        el.querySelector('[data-act="pin"]').addEventListener("click", () => {
+          updateNote(n.id, { pinned: !n.pinned });
+        });
+
+        el.querySelector('[data-act="del"]').addEventListener("click", () => {
+          deleteNote(n.id);
+        });
+
+        // Quick edit: double-click the body to edit inline (simple, optional)
+        el.querySelector("pre").addEventListener("dblclick", () => {
+          const current = n.text;
+          const next = prompt("Edit note (simple prompt edit):", current);
+          if (next === null) return;
+          updateNote(n.id, { text: next.trimEnd() });
+          showToast("Updated");
+        });
+
+        list.appendChild(el);
+      }
+    }
+
+    // Live clock stamp in composer bar
+    function tick() {
+      nowStamp.textContent = `Now: ${fmtDate(new Date())}`;
+    }
+    tick();
+    setInterval(tick, 1000 * 10);
+
+    // UI events
+    $("addBtn").addEventListener("click", () => addNote(draft.value));
+    $("clearBtn").addEventListener("click", () => {
+      if (confirm("Delete ALL notes? No undo.")) clearAll();
+    });
+
+    q.addEventListener("input", () => render());
+
+    // Shortcuts
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "/" && document.activeElement !== q && document.activeElement !== draft) {
+        e.preventDefault();
+        q.focus();
+        q.select();
+      }
+      if (e.ctrlKey && e.key === "Enter") {
+        e.preventDefault();
+        addNote(draft.value);
+      }
+      if (e.key === "Escape") {
+        draft.focus();
+      }
+    });
+
+    render();
+    draft.focus();
+  </script>
+</body>
+</html>
