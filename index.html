@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>BenOS</title>
+  <style>
+    :root{
+      --bg:#0b0d10; --panel:#11151b; --panel2:#0f1318;
+      --text:#e6edf3; --muted:#9aa4af; --border:#243041;
+      --accent:#6ee7ff; --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans)}
+    header{
+      position:sticky;top:0;z-index:10;
+      background: linear-gradient(to bottom, rgba(11,13,16,.95), rgba(11,13,16,.75));
+      backdrop-filter: blur(6px);
+      border-bottom:1px solid var(--border);
+    }
+    .wrap{max-width:1100px;margin:0 auto;padding:16px 14px}
+    .top{
+      display:flex;gap:12px;align-items:center;flex-wrap:wrap
+    }
+    .brand{display:flex;align-items:baseline;gap:10px;margin-right:auto;font-family:var(--mono)}
+    .brand b{color:var(--accent)}
+    .brand span{color:var(--muted);font-size:12px}
+    .search{
+      flex:1 1 260px;
+      display:flex;align-items:center;gap:8px;
+      border:1px solid var(--border);
+      background:var(--panel2);
+      border-radius:12px;
+      padding:10px 12px;
+      font-family:var(--mono);
+      font-size:12px;
+      color:var(--muted);
+    }
+    .search input{
+      flex:1;background:transparent;border:0;outline:0;
+      color:var(--text);font-family:var(--mono);font-size:12px;
+    }
+    .pill{
+      border:1px solid var(--border);
+      border-radius:999px;
+      padding:6px 10px;
+      font-family:var(--mono);
+      font-size:12px;
+      color:var(--muted);
+      background:rgba(0,0,0,.15);
+      white-space:nowrap;
+    }
+    main .wrap{padding-top:14px;padding-bottom:60px}
+    .sectionTitle{
+      font-family:var(--mono);
+      color:var(--muted);
+      font-size:12px;
+      margin:14px 2px 10px;
+      display:flex;align-items:center;gap:10px;
+    }
+    .grid{
+      display:grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap:12px;
+    }
+    .card{
+      border:1px solid var(--border);
+      background:var(--panel);
+      border-radius:16px;
+      overflow:hidden;
+      cursor:pointer;
+      transition: transform .08s ease, border-color .08s ease;
+      text-decoration:none;
+      color:inherit;
+      display:flex;
+      flex-direction:column;
+      min-height:150px;
+    }
+    .card:hover{border-color:#38506e;transform:translateY(-1px)}
+    .card:active{transform:translateY(0px)}
+    .cardTop{
+      padding:12px 12px 10px;
+      border-bottom:1px solid var(--border);
+      display:flex;align-items:center;gap:10px;
+    }
+    .icon{
+      width:34px;height:34px;border-radius:10px;
+      border:1px solid var(--border);
+      background:rgba(0,0,0,.18);
+      display:grid;place-items:center;
+      font-family:var(--mono);
+      color:var(--accent);
+      flex:0 0 auto;
+    }
+    .cardTitle{
+      font-family:var(--mono);
+      font-size:13px;
+      display:flex;flex-direction:column;gap:2px;
+      min-width:0;
+    }
+    .cardTitle b{color:var(--text);font-weight:700}
+    .cardTitle span{color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .cardBody{
+      padding:12px;
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.35;
+      flex:1;
+    }
+    .cardFoot{
+      padding:10px 12px;
+      border-top:1px solid var(--border);
+      background:rgba(0,0,0,.12);
+      display:flex;justify-content:space-between;align-items:center;
+      font-family:var(--mono);
+      font-size:12px;
+      color:var(--muted);
+    }
+    .tag{border:1px solid var(--border);border-radius:999px;padding:2px 8px}
+    .kbd{
+      border:1px solid var(--border);
+      background:rgba(0,0,0,.25);
+      padding:2px 6px;
+      border-radius:8px;
+      font-family:var(--mono);
+      font-size:11px;
+      color:var(--muted);
+    }
+    .muted{color:var(--muted)}
+    .small{font-size:12px}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap top">
+      <div class="brand">
+        <b>BenOS</b><span>local micro-apps</span>
+      </div>
+
+      <div class="search" title="Filter apps">
+        <span>/</span>
+        <input id="q" placeholder="search apps… (try: note)" />
+      </div>
+
+      <span class="pill" id="meta"></span>
+    </div>
+  </header>
+
+  <main>
+    <div class="wrap">
+      <div class="sectionTitle">
+        Installed
+        <span class="muted small">• open in same tab •</span>
+        <span class="muted small">shortcut: <span class="kbd">/</span> search</span>
+      </div>
+
+      <section class="grid" id="grid"></section>
+
+      <div class="sectionTitle" style="margin-top:18px;">
+        Coming soon
+      </div>
+
+      <section class="grid">
+        <div class="card" style="opacity:.55;cursor:default" aria-disabled="true">
+          <div class="cardTop">
+            <div class="icon">📸</div>
+            <div class="cardTitle">
+              <b>Screenshot Drop</b>
+              <span>paste / drag screenshots → export</span>
+            </div>
+          </div>
+          <div class="cardBody">
+            Dump screenshots from Snipping Tool, add captions, export a clean walkthrough (HTML or PPTX later).
+          </div>
+          <div class="cardFoot">
+            <span class="tag">planned</span>
+            <span>v1</span>
+          </div>
+        </div>
+
+        <div class="card" style="opacity:.55;cursor:default" aria-disabled="true">
+          <div class="cardTop">
+            <div class="icon">🧭</div>
+            <div class="cardTitle">
+              <b>Focus Board</b>
+              <span>weekly objective + top 3</span>
+            </div>
+          </div>
+          <div class="cardBody">
+            One objective. Three moves. A “not doing” list. Prevents you building BenOS v2 instead of shipping work.
+          </div>
+          <div class="cardFoot">
+            <span class="tag">planned</span>
+            <span>v1</span>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    // BenOS home — simple “app store” look. Keep it dumb: edit the APPS array.
+    const APPS = [
+      {
+        id: "temp-notes",
+        name: "Scratchpad",
+        subtitle: "timestamped blocks • search",
+        desc: "Quick notes that stay local. Dump thoughts, hit Ctrl+Enter, search later by keyword or date.",
+        icon: "📝",
+        href: "./apps/temp-notes/index.html",
+        tag: "installed",
+        version: "v1"
+      }
+    ];
+
+    const $ = (id) => document.getElementById(id);
+    const grid = $("grid");
+    const q = $("q");
+    const meta = $("meta");
+
+    function render() {
+      const term = q.value.trim().toLowerCase();
+      const shown = APPS.filter(a => {
+        if (!term) return true;
+        const hay = `${a.name} ${a.subtitle} ${a.desc} ${a.id}`.toLowerCase();
+        return hay.includes(term);
+      });
+
+      grid.innerHTML = "";
+      if (shown.length === 0) {
+        const div = document.createElement("div");
+        div.className = "card";
+        div.style.cursor = "default";
+        div.innerHTML = `
+          <div class="cardTop">
+            <div class="icon">🔎</div>
+            <div class="cardTitle">
+              <b>No matches</b>
+              <span>try a different search</span>
+            </div>
+          </div>
+          <div class="cardBody">Nothing installed matches that filter.</div>
+          <div class="cardFoot"><span class="tag">empty</span><span>—</span></div>
+        `;
+        grid.appendChild(div);
+      }
+
+      for (const a of shown) {
+        const el = document.createElement("a");
+        el.className = "card";
+        el.href = a.href;
+        el.innerHTML = `
+          <div class="cardTop">
+            <div class="icon">${a.icon}</div>
+            <div class="cardTitle">
+              <b>${escapeHtml(a.name)}</b>
+              <span>${escapeHtml(a.subtitle)}</span>
+            </div>
+          </div>
+          <div class="cardBody">${escapeHtml(a.desc)}</div>
+          <div class="cardFoot">
+            <span class="tag">${escapeHtml(a.tag)}</span>
+            <span>${escapeHtml(a.version)}</span>
+          </div>
+        `;
+        grid.appendChild(el);
+      }
+
+      meta.textContent = `${shown.length} app${shown.length === 1 ? "" : "s"} • ${new Date().toLocaleDateString()}`;
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[<>&"]/g, ch => ({
+        "<":"&lt;", ">":"&gt;", "&":"&amp;", '"':"&quot;"
+      }[ch]));
+    }
+
+    // Shortcuts
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "/" && document.activeElement !== q) {
+        e.preventDefault();
+        q.focus();
+        q.select();
+      }
+      if (e.key === "Escape") {
+        q.blur();
+      }
+    });
+
+    q.addEventListener("input", render);
+    render();
+  </script>
+</body>
+</html>
