@@ -1,0 +1,475 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>BenOS • Screenshot Drop</title>
+  <style>
+    :root {
+      --bg: #0b0d10;
+      --panel: #11151b;
+      --panel2: #0f1318;
+      --text: #e6edf3;
+      --muted: #9aa4af;
+      --border: #243041;
+      --accent: #6ee7ff;
+      --danger: #ff6b6b;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--sans); }
+    header {
+      position: sticky; top: 0; z-index: 10;
+      background: linear-gradient(to bottom, rgba(11,13,16,.95), rgba(11,13,16,.75));
+      backdrop-filter: blur(6px);
+      border-bottom: 1px solid var(--border);
+    }
+    .wrap { max-width: 980px; margin: 0 auto; padding: 14px 14px; }
+    .toprow { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .brand { display: flex; align-items: baseline; gap: 10px; margin-right: auto; font-family: var(--mono); }
+    .brand b { color: var(--accent); }
+    .brand span { color: var(--muted); font-size: 12px; }
+
+    .btn{
+      border: 1px solid var(--border);
+      background: var(--panel);
+      color: var(--text);
+      padding: 8px 10px;
+      border-radius: 10px;
+      font-family: var(--mono);
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .btn:hover { border-color: #38506e; }
+    .btn.danger { border-color: #7a2f2f; color: #ffd1d1; }
+
+    .hint { color: var(--muted); font-size: 12px; font-family: var(--mono); }
+    kbd {
+      font-family: var(--mono);
+      border: 1px solid var(--border);
+      background: rgba(0,0,0,.25);
+      padding: 2px 6px;
+      border-radius: 8px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    main .wrap { padding-top: 10px; padding-bottom: 60px; }
+
+    .dropzone{
+      border: 1px solid var(--border);
+      background: var(--panel2);
+      border-radius: 14px;
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
+    .dropzone .bar{
+      display:flex; gap:10px; align-items:center;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      font-family: var(--mono);
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .dropzone .bar .spacer{ margin-left:auto; }
+    .pasteBox{
+      padding: 12px;
+    }
+    .pasteTarget{
+      width: 100%;
+      min-height: 88px;
+      resize: vertical;
+      border: 1px dashed #38506e;
+      background: rgba(0,0,0,.18);
+      color: var(--text);
+      border-radius: 12px;
+      padding: 12px;
+      outline: none;
+      font-family: var(--mono);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+    .pasteTarget:focus{ border-style: solid; border-color: #2a8aa0; }
+
+    .feed { display: grid; gap: 10px; }
+    .item{
+      border: 1px solid var(--border);
+      background: var(--panel);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+    .item .meta{
+      display:flex; align-items:center; gap:10px;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .pill{
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 2px 8px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .meta .spacer{ margin-left:auto; }
+    .preview{
+      padding: 12px;
+      display: grid;
+      gap: 10px;
+    }
+    .preview img{
+      width: 100%;
+      height: auto;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: rgba(0,0,0,.22);
+    }
+    .caption{
+      width: 100%;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: rgba(0,0,0,.18);
+      color: var(--text);
+      padding: 10px 10px;
+      font-family: var(--mono);
+      font-size: 12px;
+      outline: none;
+    }
+    .actions{
+      display:flex; gap:8px; justify-content:flex-end;
+      padding: 10px 12px;
+      border-top: 1px solid var(--border);
+      background: rgba(0,0,0,.12);
+    }
+
+    .empty{
+      border: 1px solid var(--border);
+      background: var(--panel);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+    .empty .meta{ padding: 10px 12px; border-bottom:1px solid var(--border); font-family: var(--mono); font-size:12px; color: var(--muted); }
+    .empty .body{ padding: 12px; color: var(--muted); font-family: var(--mono); font-size:12px; line-height:1.4; }
+
+    .toast{
+      position: fixed;
+      left: 50%;
+      bottom: 16px;
+      transform: translateX(-50%);
+      background: rgba(17,21,27,.92);
+      border: 1px solid var(--border);
+      padding: 10px 12px;
+      border-radius: 999px;
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--text);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .18s ease;
+    }
+    .toast.show{ opacity: 1; }
+  </style>
+</head>
+<body>
+<header>
+  <div class="wrap toprow">
+    <div class="brand">
+      <b>BenOS</b><span>screenshot drop</span>
+    </div>
+    <button class="btn" id="focusPaste">Focus paste box</button>
+    <button class="btn danger" id="clearAll">Nuke all</button>
+    <div class="hint">Paste: <kbd>Ctrl</kbd>+<kbd>V</kbd> • Drag & drop: file(s) • Double-click caption to quick edit</div>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <section class="dropzone" id="dropzone">
+      <div class="bar">
+        <span id="count"></span>
+        <span class="spacer"></span>
+        <span id="status">Ready</span>
+      </div>
+      <div class="pasteBox">
+        <textarea id="pasteTarget" class="pasteTarget" spellcheck="false"
+          placeholder="Paste an image here (Ctrl+V)…&#10;&#10;Tip: Snipping Tool → Copy → come here → Ctrl+V."></textarea>
+      </div>
+    </section>
+
+    <section class="feed" id="feed"></section>
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // BenOS Screenshot Drop v1
+  // - Stores images in IndexedDB (blobs)
+  // - Paste (clipboard) + drag/drop
+  // - Feed list w/ timestamp, caption, delete
+  const DB_NAME = "benos_screenshot_drop";
+  const DB_VERSION = 1;
+  const STORE = "shots";
+
+  const $ = (id) => document.getElementById(id);
+  const feed = $("feed");
+  const pasteTarget = $("pasteTarget");
+  const dropzone = $("dropzone");
+  const countEl = $("count");
+  const statusEl = $("status");
+  const toast = $("toast");
+
+  function pad(n){ return String(n).padStart(2,"0"); }
+  function fmtStamp(d){
+    return `${pad(d.getDate())}.${pad(d.getMonth()+1)}.${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  }
+
+  function showToast(msg){
+    toast.textContent = msg;
+    toast.classList.add("show");
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(()=>toast.classList.remove("show"), 900);
+  }
+
+  function setStatus(msg){ statusEl.textContent = msg; }
+
+  // --- IndexedDB helpers ---
+  function openDB(){
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open(DB_NAME, DB_VERSION);
+      req.onupgradeneeded = () => {
+        const db = req.result;
+        if (!db.objectStoreNames.contains(STORE)) {
+          const os = db.createObjectStore(STORE, { keyPath: "id" });
+          os.createIndex("createdAt", "createdAt");
+        }
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async function withStore(mode, fn){
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE, mode);
+      const store = tx.objectStore(STORE);
+      const result = fn(store, tx);
+      tx.oncomplete = () => resolve(result);
+      tx.onerror = () => reject(tx.error);
+      tx.onabort = () => reject(tx.error);
+    });
+  }
+
+  function uid(){
+    return Math.random().toString(16).slice(2) + Date.now().toString(16);
+  }
+
+  async function addShotFromBlob(blob, source="paste"){
+    const id = uid();
+    const now = new Date();
+    const rec = {
+      id,
+      createdAt: now.toISOString(),
+      source,
+      caption: "",
+      mime: blob.type || "image/png",
+      blob
+    };
+    await withStore("readwrite", (store) => store.put(rec));
+    showToast("Saved");
+    await render();
+  }
+
+  async function listShots(){
+    // newest first
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE, "readonly");
+      const store = tx.objectStore(STORE);
+      const idx = store.index("createdAt");
+      const req = idx.openCursor(null, "prev");
+      const out = [];
+      req.onsuccess = () => {
+        const cur = req.result;
+        if (cur) { out.push(cur.value); cur.continue(); }
+        else resolve(out);
+      };
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async function updateCaption(id, caption){
+    await withStore("readwrite", (store) => {
+      const req = store.get(id);
+      req.onsuccess = () => {
+        const rec = req.result;
+        if (!rec) return;
+        rec.caption = caption;
+        store.put(rec);
+      };
+    });
+    showToast("Caption saved");
+  }
+
+  async function deleteShot(id){
+    await withStore("readwrite", (store) => store.delete(id));
+    showToast("Deleted");
+    await render();
+  }
+
+  async function clearAll(){
+    await withStore("readwrite", (store) => store.clear());
+    showToast("Nuked");
+    await render();
+  }
+
+  // --- Rendering ---
+  function escapeHtml(s){
+    return String(s).replace(/[<>&"]/g, ch => ({
+      "<":"&lt;", ">":"&gt;", "&":"&amp;", '"':"&quot;"
+    }[ch]));
+  }
+
+  async function render(){
+    const shots = await listShots();
+    countEl.textContent = `${shots.length} image${shots.length===1?"":"s"}`;
+
+    // cleanup old object URLs
+    if (render._urls) render._urls.forEach(u => URL.revokeObjectURL(u));
+    render._urls = [];
+
+    feed.innerHTML = "";
+
+    if (shots.length === 0){
+      const el = document.createElement("div");
+      el.className = "empty";
+      el.innerHTML = `
+        <div class="meta"><span class="pill">empty</span><span style="margin-left:auto">Try Ctrl+V</span></div>
+        <div class="body">
+          1) Take a snip (Snipping Tool)<br/>
+          2) Copy to clipboard<br/>
+          3) Click paste box above<br/>
+          4) Press Ctrl+V<br/><br/>
+          Your feed appears here, newest first.
+        </div>
+      `;
+      feed.appendChild(el);
+      return;
+    }
+
+    for (const s of shots){
+      const created = new Date(s.createdAt);
+      const url = URL.createObjectURL(s.blob);
+      render._urls.push(url);
+
+      const el = document.createElement("article");
+      el.className = "item";
+      el.innerHTML = `
+        <div class="meta" title="${escapeHtml(s.source)} • ${escapeHtml(s.mime)}">
+          <span class="pill">${escapeHtml(fmtStamp(created))}</span>
+          <span class="pill">${escapeHtml(s.source)}</span>
+          <span class="spacer"></span>
+          <span class="pill">${Math.round((s.blob.size||0)/1024)} KB</span>
+        </div>
+        <div class="preview">
+          <img alt="screenshot" src="${url}" />
+          <input class="caption" data-id="${escapeHtml(s.id)}" placeholder="Caption (optional)…" value="${escapeHtml(s.caption||"")}" />
+        </div>
+        <div class="actions">
+          <button class="btn" data-act="copyts" data-id="${escapeHtml(s.id)}">Copy timestamp</button>
+          <button class="btn danger" data-act="del" data-id="${escapeHtml(s.id)}">Delete</button>
+        </div>
+      `;
+      feed.appendChild(el);
+
+      const cap = el.querySelector(".caption");
+      cap.addEventListener("change", () => updateCaption(s.id, cap.value));
+
+      // quick edit: double click = focus + select
+      cap.addEventListener("dblclick", () => { cap.focus(); cap.select(); });
+
+      el.querySelector('[data-act="del"]').addEventListener("click", () => deleteShot(s.id));
+      el.querySelector('[data-act="copyts"]').addEventListener("click", async () => {
+        try {
+          await navigator.clipboard.writeText(fmtStamp(created));
+          showToast("Timestamp copied");
+        } catch {
+          showToast("Clipboard blocked");
+        }
+      });
+    }
+  }
+
+  // --- Paste handling ---
+  async function handlePasteEvent(e){
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    let found = 0;
+    for (const it of items){
+      if (it.kind === "file" && it.type.startsWith("image/")){
+        const blob = it.getAsFile();
+        if (blob) { found++; await addShotFromBlob(blob, "paste"); }
+      }
+    }
+    if (found > 0){
+      e.preventDefault();
+      setStatus(`Pasted ${found} image${found===1?"":"s"}`);
+      setTimeout(()=>setStatus("Ready"), 800);
+    }
+  }
+
+  // --- Drag & drop handling ---
+  async function handleDrop(e){
+    e.preventDefault();
+    dropzone.style.outline = "none";
+    const files = [...(e.dataTransfer?.files || [])].filter(f => f.type.startsWith("image/"));
+    if (files.length === 0) { showToast("No image files"); return; }
+    setStatus(`Dropping ${files.length}…`);
+    for (const f of files) await addShotFromBlob(f, "drop");
+    setStatus("Ready");
+  }
+
+  function preventDefaults(e){ e.preventDefault(); e.stopPropagation(); }
+
+  // Wire up
+  pasteTarget.addEventListener("paste", handlePasteEvent);
+
+  // also allow pasting anywhere on the page (feels nicer)
+  document.addEventListener("paste", (e) => {
+    // if focus is in an input/textarea, let that handler deal with it
+    if (document.activeElement === pasteTarget) return;
+    handlePasteEvent(e);
+  });
+
+  ["dragenter","dragover","dragleave","drop"].forEach(ev => {
+    dropzone.addEventListener(ev, preventDefaults);
+  });
+  dropzone.addEventListener("dragover", () => {
+    dropzone.style.outline = "2px solid #2a8aa0";
+    setStatus("Drop image(s) to save");
+  });
+  dropzone.addEventListener("dragleave", () => {
+    dropzone.style.outline = "none";
+    setStatus("Ready");
+  });
+  dropzone.addEventListener("drop", handleDrop);
+
+  $("focusPaste").addEventListener("click", () => pasteTarget.focus());
+  $("clearAll").addEventListener("click", () => {
+    if (confirm("Delete ALL stored images? No undo.")) clearAll();
+  });
+
+  // First load
+  render().catch(err => {
+    console.error(err);
+    showToast("DB error (see console)");
+  });
+  pasteTarget.focus();
+</script>
+</body>
+</html>
