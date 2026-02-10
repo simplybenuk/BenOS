@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>BenOS • OKR Tracker</title>
+  <style>
+    :root {
+      --bg:#0b0d10; --panel:#11151b; --panel2:#0f1318;
+      --text:#e6edf3; --muted:#9aa4af; --border:#243041;
+      --accent:#6ee7ff; --danger:#ff6b6b; --ok:#7ee787;
+      --mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
+      --sans:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji";
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans)}
+    header{position:sticky;top:0;z-index:10;background:linear-gradient(to bottom,rgba(11,13,16,.95),rgba(11,13,16,.75));backdrop-filter:blur(6px);border-bottom:1px solid var(--border)}
+    .wrap{max-width:1040px;margin:0 auto;padding:14px}
+    .top{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .brand{display:flex;align-items:baseline;gap:10px;margin-right:auto;font-family:var(--mono)}
+    .brand b{color:var(--accent)}
+    .brand span{color:var(--muted);font-size:12px}
+    .btn{border:1px solid var(--border);background:var(--panel);color:var(--text);padding:8px 10px;border-radius:10px;font-family:var(--mono);font-size:12px;cursor:pointer}
+    .btn:hover{border-color:#38506e}
+    .btn.primary{border-color:#2a8aa0}
+    .btn.danger{border-color:#7a2f2f;color:#ffd1d1}
+    .hint{font-family:var(--mono);font-size:12px;color:var(--muted)}
+    main .wrap{padding-top:10px;padding-bottom:56px}
+
+    .panel{border:1px solid var(--border);background:var(--panel2);border-radius:14px;overflow:hidden;margin-bottom:12px}
+    .panel .bar{display:flex;gap:8px;align-items:center;padding:10px 12px;border-bottom:1px solid var(--border);font-family:var(--mono);font-size:12px;color:var(--muted)}
+    .panel .body{padding:12px}
+    .fields{display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px}
+    .field label{display:block;font-size:11px;font-family:var(--mono);color:var(--muted);margin-bottom:6px}
+    .field input,.field textarea,.field select{width:100%;border:1px solid var(--border);background:rgba(0,0,0,.2);color:var(--text);border-radius:10px;padding:8px 10px;font-family:var(--mono);font-size:12px;outline:none}
+    .field textarea{min-height:76px;resize:vertical}
+    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px}
+
+    .list{display:grid;gap:10px}
+    .objective{border:1px solid var(--border);background:var(--panel);border-radius:14px;overflow:hidden}
+    .objective .meta{display:flex;gap:10px;align-items:center;padding:10px 12px;border-bottom:1px solid var(--border);font-family:var(--mono);font-size:12px;color:var(--muted)}
+    .pill{border:1px solid var(--border);border-radius:999px;padding:2px 8px;font-size:11px}
+    .ok{border-color:#245d33;color:var(--ok)}
+    .warn{border-color:#7a5b2f;color:#ffd68f}
+    .risk{border-color:#7a2f2f;color:#ffb4b4}
+    .spacer{margin-left:auto}
+
+    .obj-body{padding:12px;display:grid;gap:10px}
+    .obj-head{display:grid;grid-template-columns:1.7fr .8fr .8fr;gap:10px}
+    .kr{border:1px solid var(--border);border-radius:12px;background:rgba(0,0,0,.15);padding:10px;display:grid;gap:8px}
+    .kr-top{display:grid;grid-template-columns:1.3fr .7fr .7fr .7fr .7fr auto;gap:8px;align-items:end}
+    .small{font-family:var(--mono);font-size:11px;color:var(--muted)}
+    .meter{height:9px;background:rgba(0,0,0,.25);border:1px solid var(--border);border-radius:999px;overflow:hidden}
+    .meter > span{display:block;height:100%;background:linear-gradient(90deg,#2a8aa0,#6ee7ff)}
+    .empty{border:1px solid var(--border);background:var(--panel);border-radius:14px;padding:14px;font-family:var(--mono);font-size:12px;color:var(--muted)}
+
+    @media (max-width:900px){
+      .fields,.obj-head,.kr-top{grid-template-columns:1fr}
+    }
+  </style>
+</head>
+<body>
+<header>
+  <div class="wrap top">
+    <div class="brand"><b>BenOS</b><span>okr tracker</span></div>
+    <button class="btn primary" id="addObjective">Add objective</button>
+    <button class="btn danger" id="clearAll">Nuke all</button>
+    <span class="hint">Progress scale:
+      <label><input type="radio" name="scale" value="percent" checked> 0-100</label>
+      <label><input type="radio" name="scale" value="decimal"> 0-1</label>
+    </span>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <section class="panel">
+      <div class="bar">
+        <span>New objective</span><span class="spacer"></span><span>Capture objective + key results, then update progress anytime.</span>
+      </div>
+      <div class="body">
+        <div class="fields">
+          <div class="field"><label>Objective</label><input id="objTitle" placeholder="e.g. Improve product adoption in SMB segment"></div>
+          <div class="field"><label>Owner</label><input id="objOwner" placeholder="e.g. Ben"></div>
+          <div class="field"><label>Timeframe</label><input id="objPeriod" placeholder="e.g. Q2 2026"></div>
+        </div>
+        <div class="row">
+          <div class="field" style="flex:1"><label>Context / notes (optional)</label><textarea id="objNote" placeholder="Why this objective matters, assumptions, constraints…"></textarea></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="list" id="list"></section>
+  </div>
+</main>
+
+<script>
+  const KEY = "benos:okr-tracker:v1";
+  const $ = (id) => document.getElementById(id);
+  const list = $("list");
+
+  function uid(){ return Math.random().toString(16).slice(2) + Date.now().toString(16); }
+  function clamp(n,min,max){ return Math.max(min, Math.min(max, n)); }
+
+  function load(){
+    try{
+      const d = JSON.parse(localStorage.getItem(KEY) || "{}");
+      if (!Array.isArray(d.objectives)) d.objectives = [];
+      if (!["percent","decimal"].includes(d.scale)) d.scale = "percent";
+      return d;
+    } catch { return { objectives: [], scale: "percent" }; }
+  }
+  function save(data){ localStorage.setItem(KEY, JSON.stringify(data)); }
+
+  let state = load();
+  document.querySelector(`input[name="scale"][value="${state.scale}"]`).checked = true;
+
+  function parseProgress(raw){
+    const num = Number(raw);
+    if (!Number.isFinite(num)) return 0;
+    return state.scale === "decimal" ? clamp(num * 100, 0, 100) : clamp(num, 0, 100);
+  }
+
+  function fmtProgress(pct){
+    const d = (pct / 100).toFixed(2);
+    return state.scale === "decimal" ? `${d}` : `${pct.toFixed(0)}%`;
+  }
+
+  function objectiveProgress(obj){
+    if (!obj.keyResults.length) return 0;
+    const total = obj.keyResults.reduce((sum,kr)=> sum + (kr.progress || 0), 0);
+    return total / obj.keyResults.length;
+  }
+
+  function statusClass(p){
+    if (p >= 70) return ["On track","ok"];
+    if (p >= 40) return ["At risk","warn"];
+    return ["Off track","risk"];
+  }
+
+  function render(){
+    if (!state.objectives.length){
+      list.innerHTML = `<div class="empty">No objectives yet. Fill the form above and click <b>Add objective</b>.</div>`;
+      return;
+    }
+
+    list.innerHTML = "";
+    for (const obj of state.objectives){
+      const progress = objectiveProgress(obj);
+      const [label, cls] = statusClass(progress);
+      const box = document.createElement("article");
+      box.className = "objective";
+      box.innerHTML = `
+        <div class="meta">
+          <span class="pill ${cls}">${label}</span>
+          <span>${progress.toFixed(0)}% objective progress</span>
+          <span class="spacer"></span>
+          <button class="btn danger" data-action="delete-objective" data-id="${obj.id}">Delete objective</button>
+        </div>
+        <div class="obj-body">
+          <div class="obj-head">
+            <div class="field"><label>Objective</label><input data-field="title" data-id="${obj.id}" value="${escapeHtml(obj.title)}"></div>
+            <div class="field"><label>Owner</label><input data-field="owner" data-id="${obj.id}" value="${escapeHtml(obj.owner || "")}"></div>
+            <div class="field"><label>Timeframe</label><input data-field="period" data-id="${obj.id}" value="${escapeHtml(obj.period || "")}"></div>
+          </div>
+          <div class="field"><label>Notes</label><textarea data-field="note" data-id="${obj.id}">${escapeHtml(obj.note || "")}</textarea></div>
+
+          <div class="small">Key Results</div>
+          ${obj.keyResults.map(kr => `
+            <div class="kr">
+              <div class="kr-top">
+                <div class="field"><label>Key Result</label><input data-kr-field="title" data-obj="${obj.id}" data-kr="${kr.id}" value="${escapeHtml(kr.title)}"></div>
+                <div class="field"><label>Baseline</label><input data-kr-field="baseline" data-obj="${obj.id}" data-kr="${kr.id}" value="${escapeHtml(kr.baseline || "")}"></div>
+                <div class="field"><label>Target</label><input data-kr-field="target" data-obj="${obj.id}" data-kr="${kr.id}" value="${escapeHtml(kr.target || "")}"></div>
+                <div class="field"><label>Current</label><input data-kr-field="current" data-obj="${obj.id}" data-kr="${kr.id}" value="${escapeHtml(kr.current || "")}"></div>
+                <div class="field"><label>Progress (${state.scale === "decimal" ? "0-1" : "0-100"})</label><input data-kr-field="progressRaw" data-obj="${obj.id}" data-kr="${kr.id}" value="${escapeHtml(state.scale === "decimal" ? (kr.progress/100).toFixed(2) : kr.progress.toFixed(0))}"></div>
+                <button class="btn danger" data-action="delete-kr" data-obj="${obj.id}" data-kr="${kr.id}">Delete</button>
+              </div>
+              <div class="small">Stored progress: ${fmtProgress(kr.progress)} (${kr.progress.toFixed(0)}%)</div>
+              <div class="meter"><span style="width:${kr.progress}%"></span></div>
+            </div>
+          `).join("")}
+          <div><button class="btn" data-action="add-kr" data-id="${obj.id}">+ Add key result</button></div>
+        </div>
+      `;
+      list.appendChild(box);
+    }
+  }
+
+  function escapeHtml(s){
+    return String(s).replace(/[<>&"]/g, ch => ({"<":"&lt;",">":"&gt;","&":"&amp;",'"':"&quot;"}[ch]));
+  }
+
+  function addObjective(){
+    const title = $("objTitle").value.trim();
+    if (!title) return;
+    state.objectives.unshift({
+      id: uid(),
+      title,
+      owner: $("objOwner").value.trim(),
+      period: $("objPeriod").value.trim(),
+      note: $("objNote").value.trim(),
+      keyResults: [{ id: uid(), title: "", baseline: "", target: "", current: "", progress: 0 }]
+    });
+    $("objTitle").value = "";
+    $("objOwner").value = "";
+    $("objPeriod").value = "";
+    $("objNote").value = "";
+    save(state); render();
+  }
+
+  $("addObjective").addEventListener("click", addObjective);
+  $("clearAll").addEventListener("click", () => {
+    if (!confirm("Delete all objectives and key results?")) return;
+    state.objectives = [];
+    save(state); render();
+  });
+
+  document.querySelectorAll('input[name="scale"]').forEach(el => {
+    el.addEventListener('change', () => {
+      state.scale = el.value;
+      save(state); render();
+    });
+  });
+
+  list.addEventListener("click", (e) => {
+    const btn = e.target.closest("button[data-action]");
+    if (!btn) return;
+    const action = btn.dataset.action;
+    if (action === "delete-objective"){
+      state.objectives = state.objectives.filter(o => o.id !== btn.dataset.id);
+    }
+    if (action === "add-kr"){
+      const o = state.objectives.find(x => x.id === btn.dataset.id);
+      if (o) o.keyResults.push({ id: uid(), title: "", baseline: "", target: "", current: "", progress: 0 });
+    }
+    if (action === "delete-kr"){
+      const o = state.objectives.find(x => x.id === btn.dataset.obj);
+      if (o) o.keyResults = o.keyResults.filter(kr => kr.id !== btn.dataset.kr);
+    }
+    save(state); render();
+  });
+
+  list.addEventListener("input", (e) => {
+    const objField = e.target.dataset.field;
+    if (objField){
+      const o = state.objectives.find(x => x.id === e.target.dataset.id);
+      if (!o) return;
+      o[objField] = e.target.value;
+      save(state);
+      return;
+    }
+
+    const krField = e.target.dataset.krField;
+    if (krField){
+      const o = state.objectives.find(x => x.id === e.target.dataset.obj);
+      if (!o) return;
+      const kr = o.keyResults.find(x => x.id === e.target.dataset.kr);
+      if (!kr) return;
+      if (krField === "progressRaw") {
+        kr.progress = parseProgress(e.target.value);
+      } else {
+        kr[krField] = e.target.value;
+      }
+      save(state);
+      render();
+    }
+  });
+
+  $("objTitle").addEventListener("keydown", (e)=>{
+    if (e.key === "Enter") { e.preventDefault(); addObjective(); }
+  });
+
+  render();
+</script>
+</body>
+</html>
