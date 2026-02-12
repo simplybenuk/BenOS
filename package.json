@@ -1,0 +1,14 @@
+{
+  "name": "benos",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "engine": "npm --prefix engine start",
+    "serve": "http-server . -p 8080 -c-1",
+    "dev": "concurrently \"npm run engine\" \"npm run serve\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "http-server": "^14.1.1"
+  }
+}
