@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>BenOS • Voice Transform</title>
+  <style>
+    :root{
+      --bg:#0b0d10; --panel:#11151b; --panel2:#0f1318;
+      --text:#e6edf3; --muted:#9aa4af; --border:#243041;
+      --accent:#6ee7ff; --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans)}
+    .wrap{max-width:980px;margin:0 auto;padding:18px 14px 64px}
+    .top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+    a{color:var(--accent);text-decoration:none}
+    .mono{font-family:var(--mono)}
+    .panel{margin-top:14px;border:1px solid var(--border);background:var(--panel);border-radius:14px;padding:14px}
+    .row{display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:end}
+    .field{display:flex;flex-direction:column;gap:6px}
+    label{font-size:12px;color:var(--muted);font-family:var(--mono)}
+    input,select,textarea,button{background:var(--panel2);border:1px solid var(--border);border-radius:10px;color:var(--text);padding:10px;font-family:var(--sans);font-size:14px}
+    textarea{min-height:280px;resize:vertical;line-height:1.35}
+    button{cursor:pointer}
+    button:hover{border-color:#38506e}
+    .hint{font-size:12px;color:var(--muted);margin-top:8px}
+    .status{margin-top:10px;font-size:13px;color:var(--muted)}
+    .out{display:grid;gap:10px;margin-top:14px}
+    audio{width:100%}
+    .parts{display:grid;gap:8px}
+    .part{padding:8px 10px;border:1px solid var(--border);border-radius:10px;background:rgba(0,0,0,.15);display:flex;justify-content:space-between;align-items:center}
+    @media (max-width:760px){.row{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <a href="../../index.html">← BenOS</a>
+      <h1 style="margin:0;font-size:18px">Voice Transform</h1>
+      <span class="mono" style="color:var(--muted);font-size:12px">txt/md → speech via local Engine</span>
+    </div>
+
+    <section class="panel">
+      <div class="row">
+        <div class="field">
+          <label for="fileInput">Text file (.txt/.md)</label>
+          <input id="fileInput" type="file" accept=".txt,.md,text/plain,text/markdown" />
+        </div>
+        <div class="field">
+          <label for="voice">Voice</label>
+          <select id="voice">
+            <option value="alloy">alloy</option>
+            <option value="verse">verse</option>
+            <option value="sage">sage</option>
+            <option value="shimmer">shimmer</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="format">Format</label>
+          <select id="format">
+            <option value="mp3">mp3</option>
+            <option value="wav">wav</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field" style="margin-top:10px">
+        <label for="textInput">Text preview / edit</label>
+        <textarea id="textInput" placeholder="Paste text or load a file."></textarea>
+      </div>
+
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">
+        <button id="transformBtn">Transform</button>
+        <button id="clearBtn" type="button">Clear output</button>
+      </div>
+      <div class="hint">If text is longer than 4096 chars, this app uses chunked mode and returns multiple playable/downloadable parts.</div>
+      <div id="status" class="status"></div>
+    </section>
+
+    <section id="output" class="out"></section>
+  </div>
+
+  <script type="module">
+    import { tts, ttsChunked } from "../../shared/benos-api.js";
+
+    const STORAGE_KEY = "benos.voice-transform.v1";
+    const MAX_SINGLE = 4096;
+
+    const fileInput = document.getElementById("fileInput");
+    const voice = document.getElementById("voice");
+    const format = document.getElementById("format");
+    const textInput = document.getElementById("textInput");
+    const transformBtn = document.getElementById("transformBtn");
+    const clearBtn = document.getElementById("clearBtn");
+    const status = document.getElementById("status");
+    const output = document.getElementById("output");
+
+    const restored = load();
+    textInput.value = restored.text || "";
+    voice.value = restored.voice || "alloy";
+    format.value = restored.format || "mp3";
+
+    textInput.addEventListener("input", persist);
+    voice.addEventListener("change", persist);
+    format.addEventListener("change", persist);
+
+    fileInput.addEventListener("change", async () => {
+      const file = fileInput.files && fileInput.files[0];
+      if (!file) return;
+      textInput.value = await file.text();
+      persist();
+      setStatus(`Loaded ${file.name} (${textInput.value.length} chars).`);
+    });
+
+    clearBtn.addEventListener("click", () => {
+      output.replaceChildren();
+      setStatus("Output cleared.");
+    });
+
+    transformBtn.addEventListener("click", async () => {
+      const text = textInput.value.trim();
+      if (!text) {
+        setStatus("Add text first.");
+        return;
+      }
+
+      transformBtn.disabled = true;
+      output.replaceChildren();
+      setStatus("Transforming...");
+
+      try {
+        if (text.length <= MAX_SINGLE) {
+          const blob = await tts({ text, voice: voice.value, format: format.value });
+          renderSingle(blob, format.value);
+          setStatus("Done. Single audio generated.");
+        } else {
+          const parts = await ttsChunked({ text, voice: voice.value, format: format.value });
+          renderParts(parts);
+          setStatus(`Done. ${parts.length} parts generated.`);
+        }
+      } catch (error) {
+        setStatus(`Error: ${error.message}`);
+      } finally {
+        transformBtn.disabled = false;
+      }
+    });
+
+    function renderSingle(blob, ext) {
+      const url = URL.createObjectURL(blob);
+      output.replaceChildren();
+      const audio = document.createElement("audio");
+      audio.controls = true;
+      audio.src = url;
+
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `voice-transform.${ext}`;
+      link.textContent = `Download voice-transform.${ext}`;
+
+      output.appendChild(audio);
+      output.appendChild(link);
+    }
+
+    function renderParts(parts) {
+      const holder = document.createElement("div");
+      holder.className = "parts";
+      parts.forEach((part, index) => {
+        const url = URL.createObjectURL(part.blob);
+        const row = document.createElement("div");
+        row.className = "part";
+        row.innerHTML = `<span>Part ${index + 1}</span>`;
+
+        const right = document.createElement("div");
+        right.style.display = "flex";
+        right.style.gap = "8px";
+
+        const play = document.createElement("audio");
+        play.controls = true;
+        play.src = url;
+
+        const dl = document.createElement("a");
+        dl.href = url;
+        dl.download = part.filename;
+        dl.textContent = "Download";
+
+        right.appendChild(play);
+        right.appendChild(dl);
+        row.appendChild(right);
+        holder.appendChild(row);
+      });
+      output.replaceChildren(holder);
+    }
+
+    function setStatus(msg) { status.textContent = msg; }
+
+    function persist() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        text: textInput.value,
+        voice: voice.value,
+        format: format.value
+      }));
+    }
+
+    function load() {
+      try {
+        return JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}") || {};
+      } catch (_err) {
+        return {};
+      }
+    }
+  </script>
+</body>
+</html>

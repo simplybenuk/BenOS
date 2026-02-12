@@ -103,6 +103,29 @@ Red flags:
 
 ---
 
+
+## Local Engine (OpenAI proxy)
+
+Keep browser apps static and local-first, but route OpenAI calls through a local Engine so keys stay server-side.
+
+1. Set your API key in your shell:
+   - `export OPENAI_API_KEY=your_key_here`
+2. Install dependencies:
+   - `npm install`
+   - `npm --prefix engine install`
+3. Start the Engine:
+   - `npm run engine` (http://localhost:8787)
+4. Start static app serving in another terminal:
+   - `npm run serve` (default http://localhost:8080)
+5. Open BenOS and launch **Voice Transform**:
+   - `http://localhost:8080/apps/voice-transform/index.html`
+
+Security note: never paste your OpenAI API key into browser code or app inputs.
+
+Optional: set `OPENAI_TTS_MODEL` to override the Engine TTS model (defaults to `tts-1`).
+
+---
+
 ## Guiding principle
 
 > If it survives more than a few weeks, it must earn its keep.
