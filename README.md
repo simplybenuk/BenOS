@@ -122,6 +122,8 @@ Keep browser apps static and local-first, but route OpenAI calls through a local
 
 Security note: never paste your OpenAI API key into browser code or app inputs.
 
+Optional: set `OPENAI_TTS_MODEL` to override the Engine TTS model (defaults to `tts-1`).
+
 ---
 
 ## Guiding principle

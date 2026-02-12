@@ -5,6 +5,7 @@ const PORT = Number(process.env.PORT || 8787);
 const OPENAI_URL = "https://api.openai.com/v1/audio/speech";
 const MAX_TTS_CHARS = 4096;
 const CHUNK_TARGET = 3800;
+const OPENAI_TTS_MODEL = process.env.OPENAI_TTS_MODEL || "tts-1";
 
 app.use(express.json({ limit: "2mb" }));
 
@@ -87,7 +88,7 @@ async function openaiTts({ text, voice, format }) {
   }
 
   const payload = {
-    model: "gpt-4o-mini-tts",
+    model: OPENAI_TTS_MODEL,
     input: text,
     voice: voice || "alloy",
     format: normalizeFormat(format)

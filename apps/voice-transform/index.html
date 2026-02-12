@@ -115,7 +115,7 @@
     });
 
     clearBtn.addEventListener("click", () => {
-      output.innerHTML = "";
+      output.replaceChildren();
       setStatus("Output cleared.");
     });
 
@@ -127,7 +127,7 @@
       }
 
       transformBtn.disabled = true;
-      output.innerHTML = "";
+      output.replaceChildren();
       setStatus("Transforming...");
 
       try {
@@ -149,7 +149,7 @@
 
     function renderSingle(blob, ext) {
       const url = URL.createObjectURL(blob);
-      output.innerHTML = "";
+      output.replaceChildren();
       const audio = document.createElement("audio");
       audio.controls = true;
       audio.src = url;
