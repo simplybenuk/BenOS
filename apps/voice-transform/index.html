@@ -52,8 +52,10 @@
           <label for="voice">Voice</label>
           <select id="voice">
             <option value="alloy">alloy</option>
-            <option value="verse">verse</option>
-            <option value="sage">sage</option>
+            <option value="echo">echo</option>
+            <option value="fable">fable</option>
+            <option value="onyx">onyx</option>
+            <option value="nova">nova</option>
             <option value="shimmer">shimmer</option>
           </select>
         </div>
@@ -170,7 +172,10 @@
         const url = URL.createObjectURL(part.blob);
         const row = document.createElement("div");
         row.className = "part";
-        row.innerHTML = `<span>Part ${index + 1}</span>`;
+
+        const partLabel = document.createElement("span");
+        partLabel.textContent = `Part ${index + 1}`;
+        row.appendChild(partLabel);
 
         const right = document.createElement("div");
         right.style.display = "flex";

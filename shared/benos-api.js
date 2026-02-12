@@ -33,15 +33,16 @@ export async function ttsChunked({ text, voice = "alloy", format = "mp3" }) {
   if (!response.ok) await parseError(response);
   const data = await response.json();
 
-  return (data.parts || []).map((part) => {
-    const binary = atob(part.base64);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+  return Promise.all((data.parts || []).map(async (part) => {
+    const contentType = part.contentType || `audio/${format === "wav" ? "wav" : "mpeg"}`;
+    const base64 = part.base64 || "";
+    const res = await fetch(`data:${contentType};base64,${base64}`);
+    const blob = await res.blob();
 
     return {
-      blob: new Blob([bytes], { type: part.contentType || `audio/${format === "wav" ? "wav" : "mpeg"}` }),
+      blob,
       filename: part.suggestedFilename || `tts-part-${part.index}.${format}`,
       contentType: part.contentType || "application/octet-stream"
     };
-  });
+  }));
 }

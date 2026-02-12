@@ -2,6 +2,7 @@ const express = require("express");
 
 const app = express();
 const PORT = Number(process.env.PORT || 8787);
+const HOST = "127.0.0.1";
 const OPENAI_URL = "https://api.openai.com/v1/audio/speech";
 const MAX_TTS_CHARS = 4096;
 const CHUNK_TARGET = 3800;
@@ -172,6 +173,6 @@ app.post("/openai/tts-chunked", async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`BenOS Engine listening on http://localhost:${PORT}`);
+app.listen(PORT, HOST, () => {
+  console.log(`BenOS Engine listening on http://${HOST}:${PORT}`);
 });
