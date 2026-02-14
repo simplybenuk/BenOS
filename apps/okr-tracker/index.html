@@ -260,11 +260,13 @@
       if (!kr) return;
       if (krField === "progressRaw") {
         kr.progress = parseProgress(e.target.value);
-      } else {
-        kr[krField] = e.target.value;
+        save(state);
+        render();
+        return;
       }
+
+      kr[krField] = e.target.value;
       save(state);
-      render();
     }
   });
 
