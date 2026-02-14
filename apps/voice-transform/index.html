@@ -16,6 +16,10 @@
     .wrap{max-width:980px;margin:0 auto;padding:18px 14px 64px}
     .top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
     a{color:var(--accent);text-decoration:none}
+    .brand{display:flex;align-items:baseline;gap:10px;margin-right:auto;font-family:var(--mono);text-decoration:none}
+    .brand b{color:var(--accent)}
+    .brand span{color:var(--muted);font-size:12px}
+    .brand:visited{color:inherit}
     .mono{font-family:var(--mono)}
     .panel{margin-top:14px;border:1px solid var(--border);background:var(--panel);border-radius:14px;padding:14px}
     .row{display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:end}
@@ -37,7 +41,7 @@
 <body>
   <div class="wrap">
     <div class="top">
-      <a href="../../index.html">← BenOS</a>
+      <a class="brand" href="../../index.html" aria-label="Back to BenOS dashboard"><b>BenOS</b><span>voice transform</span></a>
       <h1 style="margin:0;font-size:18px">Voice Transform</h1>
       <span class="mono" style="color:var(--muted);font-size:12px">txt/md → speech via local Engine</span>
     </div>

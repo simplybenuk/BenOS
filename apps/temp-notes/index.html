@@ -40,7 +40,9 @@
     .brand {
       display: flex; align-items: baseline; gap: 10px; margin-right: auto;
       font-family: var(--mono);
+      text-decoration: none;
     }
+    .brand:visited { color: inherit; }
     .brand b { color: var(--accent); }
     .brand span { color: var(--muted); font-size: 12px; }
     .btn {
@@ -181,9 +183,9 @@
 <body>
   <header>
     <div class="wrap toprow">
-      <div class="brand">
+      <a class="brand" href="../../index.html" aria-label="Back to BenOS dashboard">
         <b>BenOS</b><span>scratchpad</span>
-      </div>
+      </a>
 
       <div class="search" title="Search notes (content + date)">
         <span style="color:var(--muted)">/</span>
