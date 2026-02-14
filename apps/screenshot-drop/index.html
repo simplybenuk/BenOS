@@ -27,9 +27,10 @@
     }
     .wrap { max-width: 980px; margin: 0 auto; padding: 14px 14px; }
     .toprow { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-    .brand { display: flex; align-items: baseline; gap: 10px; margin-right: auto; font-family: var(--mono); }
+    .brand { display: flex; align-items: baseline; gap: 10px; margin-right: auto; font-family: var(--mono); text-decoration: none; }
     .brand b { color: var(--accent); }
     .brand span { color: var(--muted); font-size: 12px; }
+    .brand:visited { color: inherit; }
 
     .btn{
       border: 1px solid var(--border);
@@ -176,9 +177,9 @@
 <body>
 <header>
   <div class="wrap toprow">
-    <div class="brand">
+    <a class="brand" href="../../index.html" aria-label="Back to BenOS dashboard">
       <b>BenOS</b><span>screenshot drop</span>
-    </div>
+    </a>
     <button class="btn" id="focusPaste">Focus paste box</button>
     <button class="btn danger" id="clearAll">Nuke all</button>
     <div class="hint">Paste: <kbd>Ctrl</kbd>+<kbd>V</kbd> • Drag & drop: file(s) • Double-click caption to quick edit</div>
