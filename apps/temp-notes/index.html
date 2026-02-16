@@ -111,6 +111,11 @@
       font-size: 13px;
       line-height: 1.45;
     }
+    .composer-actions {
+      display: flex;
+      justify-content: flex-end;
+      padding: 0 12px 12px;
+    }
 
     .list { display: grid; gap: 10px; }
     .note {
@@ -204,9 +209,12 @@
         <div class="bar">
           <span id="nowStamp"></span>
           <span class="spacer"></span>
-          <span>Write a block. Hit <kbd>Ctrl</kbd>+<kbd>Enter</kbd> to save as a timestamped note.</span>
+          <span>Write a block. Hit <kbd>Ctrl</kbd>+<kbd>Enter</kbd> or tap Save note.</span>
         </div>
         <textarea id="draft" spellcheck="false" placeholder="Dump thoughts here…"></textarea>
+        <div class="composer-actions">
+          <button class="btn primary" id="saveDraftBtn" aria-label="Save note">Save note</button>
+        </div>
       </section>
 
       <section class="list" id="list"></section>
@@ -340,7 +348,7 @@
           <div class="meta">
             <span class="pill">empty</span>
             <span class="spacer"></span>
-            <span>Tip: paste something, hit Ctrl+Enter</span>
+            <span>Tip: paste something, tap Save note (or hit Ctrl+Enter)</span>
           </div>
           <pre style="color:var(--muted)">No notes match. Try searching by date like "09.02" or a keyword.</pre>
         `;
@@ -415,6 +423,7 @@
 
     // UI events
     $("addBtn").addEventListener("click", () => addNote(draft.value));
+    $("saveDraftBtn").addEventListener("click", () => addNote(draft.value));
     $("clearBtn").addEventListener("click", () => {
       if (confirm("Delete ALL notes? No undo.")) clearAll();
     });
