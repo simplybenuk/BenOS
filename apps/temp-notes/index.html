@@ -149,6 +149,32 @@
       line-height: 1.45;
       white-space: pre-wrap;
       word-break: break-word;
+      cursor: text;
+    }
+    .note textarea.edit-text {
+      display: block;
+      width: calc(100% - 24px);
+      min-height: 160px;
+      margin: 12px;
+      resize: vertical;
+      border: 1px solid var(--border);
+      outline: 0;
+      background: rgba(0,0,0,.18);
+      color: var(--text);
+      padding: 12px;
+      border-radius: 12px;
+      font-family: var(--mono);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+    .note textarea.edit-text:focus { border-color: #2a8aa0; }
+    .note.editing pre { display: none; }
+    .edit-status {
+      color: var(--accent);
+      font-family: var(--mono);
+      font-size: 12px;
+      margin-right: auto;
+      align-self: center;
     }
     .note .actions {
       display: flex; gap: 8px; justify-content: flex-end;
@@ -199,7 +225,7 @@
 
       <button class="btn primary" id="addBtn" title="Create note (Ctrl+Enter)">New note</button>
       <button class="btn" id="clearBtn" title="Deletes ALL notes. No undo.">Nuke</button>
-      <div class="hint">Shortcuts: <kbd>Ctrl</kbd>+<kbd>Enter</kbd> new • <kbd>/</kbd> focus search</div>
+      <div class="hint">Shortcuts: <kbd>Ctrl</kbd>+<kbd>Enter</kbd> save • <kbd>/</kbd> search • double-click note to edit</div>
     </div>
   </header>
 
@@ -268,6 +294,20 @@
       toast.classList.add("show");
       clearTimeout(showToast._t);
       showToast._t = setTimeout(()=>toast.classList.remove("show"), 900);
+    }
+
+    function escapeHtml(text) {
+      return text.replace(/[<>&"]/g, s => ({
+        "<": "&lt;",
+        ">": "&gt;",
+        "&": "&amp;",
+        "\"": "&quot;"
+      }[s]));
+    }
+
+    function autosizeTextarea(textarea) {
+      textarea.style.height = "auto";
+      textarea.style.height = `${Math.max(textarea.scrollHeight, 160)}px`;
     }
 
     function addNote(text) {
@@ -372,11 +412,12 @@
             <span class="pill" title="${fmtDate(created)}">+ ${fmtShort(created)}</span>
             <span class="pill" title="${fmtDate(updated)}">~ ${fmtShort(updated)}</span>
             <span class="spacer"></span>
-            <span title="${title}">${title.replace(/[<>&]/g, s => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[s]))}</span>
+            <span title="${escapeHtml(title)}">${escapeHtml(title)}</span>
           </div>
-          <pre></pre>
+          <pre title="Double-click to edit"></pre>
           <div class="actions">
             <button class="btn" data-act="copy">Copy</button>
+            <button class="btn" data-act="edit">Edit</button>
             <button class="btn" data-act="pin">${n.pinned ? "Unpin" : "Pin"}</button>
             <button class="btn danger" data-act="del">Delete</button>
           </div>
@@ -393,6 +434,10 @@
           }
         });
 
+        el.querySelector('[data-act="edit"]').addEventListener("click", () => {
+          startEdit(el, n);
+        });
+
         el.querySelector('[data-act="pin"]').addEventListener("click", () => {
           updateNote(n.id, { pinned: !n.pinned });
         });
@@ -401,17 +446,69 @@
           deleteNote(n.id);
         });
 
-        // Quick edit: double-click the body to edit inline (simple, optional)
         el.querySelector("pre").addEventListener("dblclick", () => {
-          const current = n.text;
-          const next = prompt("Edit note (simple prompt edit):", current);
-          if (next === null) return;
-          updateNote(n.id, { text: next.trimEnd() });
-          showToast("Updated");
+          startEdit(el, n);
         });
 
         list.appendChild(el);
       }
+    }
+
+    function startEdit(el, note) {
+      if (el.classList.contains("editing")) return;
+
+      const actions = el.querySelector(".actions");
+      const originalActions = actions.innerHTML;
+      const editor = document.createElement("textarea");
+      editor.className = "edit-text";
+      editor.spellcheck = false;
+      editor.value = note.text;
+
+      function finish(cancelled) {
+        editor.remove();
+        el.classList.remove("editing");
+        actions.innerHTML = originalActions;
+        if (cancelled) render();
+      }
+
+      function saveEdit() {
+        const next = editor.value.trimEnd();
+        if (!next.trim()) {
+          showToast("Empty note not saved");
+          editor.focus();
+          return;
+        }
+        updateNote(note.id, { text: next });
+        showToast("Updated");
+      }
+
+      el.classList.add("editing");
+      el.querySelector("pre").after(editor);
+      actions.innerHTML = `
+        <span class="edit-status">Editing · Ctrl+Enter saves · Esc cancels</span>
+        <button class="btn primary" data-act="save-edit">Save</button>
+        <button class="btn" data-act="cancel-edit">Cancel</button>
+      `;
+
+      actions.querySelector('[data-act="save-edit"]').addEventListener("click", saveEdit);
+      actions.querySelector('[data-act="cancel-edit"]').addEventListener("click", () => finish(true));
+      editor.addEventListener("input", () => autosizeTextarea(editor));
+      editor.addEventListener("keydown", (e) => {
+        if (e.ctrlKey && e.key === "Enter") {
+          e.preventDefault();
+          e.stopPropagation();
+          saveEdit();
+        }
+        if (e.key === "Escape") {
+          e.preventDefault();
+          e.stopPropagation();
+          finish(true);
+        }
+      });
+
+      autosizeTextarea(editor);
+      editor.focus();
+      editor.setSelectionRange(editor.value.length, editor.value.length);
     }
 
     // Live clock stamp in composer bar
@@ -432,16 +529,16 @@
 
     // Shortcuts
     document.addEventListener("keydown", (e) => {
-      if (e.key === "/" && document.activeElement !== q && document.activeElement !== draft) {
+      if (e.key === "/" && !document.activeElement.matches("input, textarea")) {
         e.preventDefault();
         q.focus();
         q.select();
       }
-      if (e.ctrlKey && e.key === "Enter") {
+      if (e.ctrlKey && e.key === "Enter" && document.activeElement !== q) {
         e.preventDefault();
         addNote(draft.value);
       }
-      if (e.key === "Escape") {
+      if (e.key === "Escape" && !document.activeElement.classList.contains("edit-text")) {
         draft.focus();
       }
     });
