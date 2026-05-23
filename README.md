@@ -10,7 +10,7 @@ No accounts. No sync. No cloud.
 
 ## Current apps
 
-- **Journey Board** — arrange journey screenshots, add text and connectors, export a high-resolution PNG for review
+- **Journey Board** — arrange journey screenshots, add text and connectors, save reusable journeys, and export high-resolution PNGs for review
 - **Scratchpad** — timestamped local notes with search
 - **Screenshot Drop** — paste or drag screenshots into a simple local visual feed
 
@@ -85,8 +85,10 @@ Use it for reviewing journeys and workflows where the detail inside screenshots 
 - Add text notes
 - Shift-click two items, then connect them with an optional label
 - Resize screenshots with `−` / `+`
-- Export the laid-out journey as a cropped, high-resolution PNG
-- Board autosaves locally in IndexedDB
+- Name, switch, duplicate and delete locally saved journeys
+- Zoom in/out or fit the journey to the canvas for overview and detail work
+- Export the laid-out journey as a cropped, high-resolution PNG unaffected by canvas zoom
+- Journeys autosave locally in IndexedDB
 
 ---
 
