@@ -82,6 +82,7 @@ Use it for reviewing journeys and workflows where the detail inside screenshots 
 
 - Paste or upload screenshots
 - Drag cards into a flow
+- Hold right click anywhere on the board and drag to pan around
 - Add text notes
 - Shift-click two items, then connect them with an optional label
 - Resize screenshots with `−` / `+`

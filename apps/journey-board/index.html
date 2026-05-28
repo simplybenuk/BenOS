@@ -12,7 +12,9 @@
     button,.file,select,input.board-name{height:36px;border:1px solid var(--border);background:var(--panel);color:var(--text);padding:8px 10px;border-radius:10px;font-family:var(--mono);font-size:12px}button,.file{cursor:pointer;white-space:nowrap}button:hover,.file:hover{border-color:#38506e}.primary{border-color:#2a8aa0}.danger{border-color:#7a2f2f;color:#ffd1d1}input[type=file]{display:none}
     select{max-width:180px}input.board-name{width:185px;background:var(--panel2)}.divider{height:26px;border-left:1px solid var(--border);margin:0 2px}.zoom{display:flex;align-items:center;gap:4px}.zoom button{padding:6px 10px}.zoom span{min-width:48px;text-align:center;font:12px var(--mono);color:var(--muted)}
     .hint{font-family:var(--mono);font-size:11px;color:var(--muted);margin-left:auto}
-    #viewport{position:relative;height:calc(100vh - 62px);overflow:auto;background:radial-gradient(circle at 1px 1px,#1c2530 1px,transparent 0);background-size:24px 24px}
+    #viewport{position:relative;height:calc(100vh - 62px);overflow:auto;cursor:grab;background:radial-gradient(circle at 1px 1px,#1c2530 1px,transparent 0);background-size:24px 24px}
+    #viewport.panning{cursor:grabbing;user-select:none}
+    #viewport.panning *{cursor:grabbing!important}
     #stage{position:relative;width:5000px;height:3200px}
     #surface{position:absolute;left:0;top:0;width:5000px;height:3200px;transform-origin:0 0}
     svg{position:absolute;inset:0;width:5000px;height:3200px;pointer-events:none;overflow:visible}.link{stroke:#9aa4af;stroke-width:2;fill:none;marker-end:url(#arrow)}.link-label{fill:#c8d1db;font:12px var(--sans);paint-order:stroke;stroke:var(--bg);stroke-width:6px;stroke-linejoin:round}
@@ -36,7 +38,7 @@
   <span class="divider"></span>
   <div class="zoom"><button id="zoomOut" aria-label="Zoom out">−</button><span id="zoomValue">100%</span><button id="zoomIn" aria-label="Zoom in">+</button><button id="fitBtn">Fit</button></div>
   <button id="exportBtn" class="primary">Export PNG @2×</button>
-  <span class="hint">paste screenshots • drag headers • Shift-click two to connect • autosaves locally</span>
+  <span class="hint">paste screenshots • drag headers • right-drag to pan • Shift-click two to connect • autosaves locally</span>
 </header>
 <div id="viewport"><div id="stage"><div id="surface">
   <svg aria-hidden="true"><defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0 0L0 6L9 3z" fill="#9aa4af" /></marker></defs><g id="links"></g></svg>
@@ -48,7 +50,7 @@
   const DB = "benos_journey_board", STORE = "boards", LEGACY_KEY = "default", WORLD_W = 5000, WORLD_H = 3200;
   const $ = id => document.getElementById(id);
   const nodesEl=$("nodes"), linksEl=$("links"), viewport=$("viewport"), stage=$("stage"), surface=$("surface"), toast=$("toast");
-  let state=null, journeys=[], selected=[], drag=null, suppressClick=null, savingTimer=null, zoom=1;
+  let state=null, journeys=[], selected=[], drag=null, pan=null, suppressClick=null, suppressSurfaceClick=false, savingTimer=null, zoom=1;
 
   const NOTE_COLORS = [
     {id:"default",name:"Slate",bg:"#11151b",bar:"#161c24",text:"#e6edf3",meta:"#9aa4af",border:"#243041",placeholder:"#9aa4af"},
@@ -99,7 +101,13 @@
   nodesEl.addEventListener("pointermove",e=>{if(!drag||e.pointerId!==drag.pointerId)return;const node=find(drag.id),p=point(e);node.x=Math.max(0,p.x-drag.dx);node.y=Math.max(0,p.y-drag.dy);const el=nodeElement(node.id);if(el){el.style.left=`${node.x}px`;el.style.top=`${node.y}px`;}queueSave();drawLinks();});
   nodesEl.addEventListener("pointerup",()=>{drag=null;});
   nodesEl.addEventListener("click",e=>{const el=e.target.closest(".node");if(!el)return;const node=find(el.dataset.id),action=e.target.closest("button")?.dataset.act;if(!action){if(suppressClick===node.id){suppressClick=null;return;}if(!e.target.matches("textarea"))select(node.id,e.shiftKey);return;}if(action==="delete"){state.nodes=state.nodes.filter(n=>n.id!==node.id);state.links=state.links.filter(l=>l.from!==node.id&&l.to!==node.id);selected=selected.filter(id=>id!==node.id);}if(action==="smaller")node.w=Math.max(160,node.w-60);if(action==="larger")node.w=Math.min(1000,node.w+60);if(action.startsWith("color:")&&node.type==="note")node.color=action.slice(6);queueSave();render();});
-  surface.addEventListener("click",e=>{if(e.target===surface||e.target.tagName.toLowerCase()==="svg"){selected=[];updateSelection();}});
+  viewport.addEventListener("pointerdown",e=>{if(e.button!==2)return;pan={pointerId:e.pointerId,x:e.clientX,y:e.clientY,left:viewport.scrollLeft,top:viewport.scrollTop,moved:false};viewport.classList.add("panning");viewport.setPointerCapture(e.pointerId);e.preventDefault();});
+  viewport.addEventListener("pointermove",e=>{if(!pan||e.pointerId!==pan.pointerId)return;const dx=e.clientX-pan.x,dy=e.clientY-pan.y;if(Math.abs(dx)>3||Math.abs(dy)>3)pan.moved=true;viewport.scrollLeft=pan.left-dx;viewport.scrollTop=pan.top-dy;});
+  function stopPan(e){ if(!pan||e.pointerId!==pan.pointerId)return;suppressSurfaceClick=e.type==="pointerup"&&pan.moved;pan=null;viewport.classList.remove("panning"); }
+  viewport.addEventListener("pointerup",stopPan);
+  viewport.addEventListener("pointercancel",stopPan);
+  viewport.addEventListener("contextmenu",e=>{if(pan||suppressSurfaceClick)e.preventDefault();});
+  surface.addEventListener("click",e=>{if(suppressSurfaceClick){suppressSurfaceClick=false;return;}if(e.target===surface||e.target.tagName.toLowerCase()==="svg"){selected=[];updateSelection();}});
 
   $("journeySelect").addEventListener("change",e=>openJourney(e.target.value).catch(()=>show("Could not load journey")));
   $("boardName").addEventListener("input",e=>{state.name=e.target.value;queueSave();renderPicker();});
