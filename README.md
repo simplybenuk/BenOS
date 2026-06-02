@@ -10,6 +10,8 @@ No accounts. No sync. No cloud.
 
 ## Current apps
 
+- **Layout Builder** — arrange labelled measured rectangles on a fixed canvas for sheet cuts, rooms, and simple spatial plans
+- **Wireframe Builder** — sketch responsive page layouts with div-like blocks across desktop, tablet, and mobile breakpoints
 - **Journey Board** — arrange journey screenshots, add text and connectors, save reusable journeys, and export high-resolution PNGs for review
 - **Scratchpad** — timestamped local notes with search
 - **Screenshot Drop** — paste or drag screenshots into a simple local visual feed
@@ -62,6 +64,10 @@ BenOS/
 ├── README.md
 ├── index.html
 └── apps/
+    ├── layout-builder/
+    │   └── index.html
+    ├── wireframe-builder/
+    │   └── index.html
     ├── journey-board/
     │   └── index.html
     ├── temp-notes/

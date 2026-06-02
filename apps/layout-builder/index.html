@@ -1,0 +1,412 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>BenOS - Layout Builder</title>
+  <style>
+    :root{
+      --bg:#0b0d10;--panel:#11151b;--panel2:#0f1318;--text:#e6edf3;--muted:#9aa4af;--border:#243041;
+      --accent:#6ee7ff;--ok:#7ee787;--warn:#ffd166;--danger:#ff6b6b;--paper:#f7f3e8;--ink:#1d252d;
+      --mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
+      --sans:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hidden}
+    header{height:62px;display:flex;gap:8px;align-items:center;padding:10px 12px;border-bottom:1px solid var(--border);background:rgba(11,13,16,.97);position:relative;z-index:5;flex-wrap:wrap}
+    .brand{display:flex;align-items:baseline;gap:10px;margin-right:4px;font-family:var(--mono);text-decoration:none}.brand b{color:var(--accent)}.brand span{color:var(--muted);font-size:12px}.brand:visited{color:inherit}
+    button,select,input{height:36px;border:1px solid var(--border);background:var(--panel);color:var(--text);padding:8px 10px;border-radius:8px;font-family:var(--mono);font-size:12px;outline:none}
+    button{cursor:pointer;white-space:nowrap}button:hover,select:hover,input:focus{border-color:#38506e}.primary{border-color:#2a8aa0}.danger{border-color:#7a2f2f;color:#ffd1d1}
+    .divider{height:26px;border-left:1px solid var(--border);margin:0 2px}.name{width:185px;background:var(--panel2)}.short{width:82px}.tiny{width:62px}.grow{margin-left:auto}.status{font:12px var(--mono);color:var(--muted);min-width:135px;text-align:right}
+    main{height:calc(100vh - 62px);display:grid;grid-template-columns:1fr 330px;min-height:0}
+    #viewport{position:relative;overflow:auto;background:#0f1318;background-image:radial-gradient(circle at 1px 1px,#223042 1px,transparent 0);background-size:24px 24px}
+    #stage{position:relative;min-width:100%;min-height:100%;display:grid;place-items:center;padding:48px}
+    #sheetWrap{position:relative;filter:drop-shadow(0 18px 28px rgba(0,0,0,.28))}
+    #sheet{position:relative;background:var(--paper);border:2px solid #d0c6ad;color:var(--ink);overflow:visible;touch-action:none}
+    #sheet::before{content:"";position:absolute;inset:0;background-image:linear-gradient(to right,rgba(73,90,108,.18) 1px,transparent 1px),linear-gradient(to bottom,rgba(73,90,108,.18) 1px,transparent 1px);background-size:var(--grid-px) var(--grid-px);opacity:.9;pointer-events:none}
+    .sheetLabel{position:absolute;font:12px var(--mono);color:#d7e1ea;background:rgba(11,13,16,.92);border:1px solid var(--border);border-radius:999px;padding:5px 9px;white-space:nowrap}
+    #topMeasure{left:50%;top:-35px;transform:translateX(-50%)}#leftMeasure{left:-37px;top:50%;transform:translateY(-50%) rotate(-90deg)}
+    .block{position:absolute;border:2px solid rgba(29,37,45,.58);background:var(--block,#9fd0ff);box-shadow:inset 0 0 0 1px rgba(255,255,255,.25);cursor:grab;touch-action:none;min-width:14px;min-height:14px}
+    .block.selected{outline:3px solid #11151b;outline-offset:3px}.block.overlap{border-color:#bb3030;box-shadow:inset 0 0 0 2px rgba(255,255,255,.25),0 0 0 2px rgba(255,107,107,.7)}
+    .block:active{cursor:grabbing}.block .body{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:6px;overflow:hidden;pointer-events:none}
+    .block b{display:block;font:700 12px/1.2 var(--mono);color:#101820;overflow:hidden;text-overflow:ellipsis;max-width:100%}.block span{display:block;margin-top:3px;font:11px/1.2 var(--mono);color:rgba(16,24,32,.72)}
+    .handle{position:absolute;right:-7px;bottom:-7px;width:14px;height:14px;border:2px solid #11151b;border-radius:50%;background:var(--accent);cursor:nwse-resize;pointer-events:auto}
+    .edge{position:absolute;font:10px var(--mono);color:#17202a;background:rgba(247,243,232,.88);border:1px solid rgba(29,37,45,.2);border-radius:999px;padding:2px 5px;white-space:nowrap;pointer-events:none}
+    .edge.w{left:50%;bottom:-23px;transform:translateX(-50%)}.edge.h{top:50%;right:-28px;transform:translateY(-50%) rotate(90deg)}
+    .ghost{position:absolute;inset:16px;border:1px dashed #718197;border-radius:12px;display:grid;place-items:center;color:#53606e;font:12px var(--mono);text-align:center;pointer-events:none}
+    aside{border-left:1px solid var(--border);background:var(--panel2);overflow:auto}
+    .panel{border-bottom:1px solid var(--border);padding:12px}.panelTitle{display:flex;align-items:center;gap:8px;margin-bottom:10px;font:12px var(--mono);color:var(--muted)}.panelTitle strong{color:var(--text);font-weight:700}
+    .fields{display:grid;grid-template-columns:1fr 1fr;gap:8px}.fields.one{grid-template-columns:1fr}.field label{display:block;margin-bottom:5px;font:11px var(--mono);color:var(--muted)}.field input,.field select{width:100%;background:rgba(0,0,0,.18)}
+    .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.actions button{flex:1 1 auto}.list{display:grid;gap:8px}.row{border:1px solid var(--border);background:var(--panel);border-radius:8px;padding:8px;display:grid;grid-template-columns:18px 1fr auto;gap:8px;align-items:center;cursor:pointer}.row.selected{border-color:#2a8aa0}.swatch{width:18px;height:18px;border-radius:5px;border:1px solid rgba(255,255,255,.25)}.row b{font:12px var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.row span{font:11px var(--mono);color:var(--muted)}.row button{height:28px;padding:4px 7px}
+    .palette{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}.colorBtn{height:28px;border-radius:8px;padding:0}.colorBtn.active{outline:2px solid var(--accent);outline-offset:2px}
+    .metric{display:grid;grid-template-columns:1fr auto;gap:8px;font:12px var(--mono);color:var(--muted);padding:4px 0}.metric strong{color:var(--text);font-weight:700}
+    .toast{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);background:rgba(17,21,27,.96);border:1px solid var(--border);padding:10px 13px;border-radius:999px;font:12px var(--mono);opacity:0;pointer-events:none;transition:.16s;z-index:10}.toast.show{opacity:1}
+    @media(max-width:980px){header{height:104px}main{height:calc(100vh - 104px);grid-template-columns:1fr}.grow,.status{display:none}aside{position:absolute;right:0;top:104px;bottom:0;width:320px;max-width:88vw;z-index:4;box-shadow:-18px 0 28px rgba(0,0,0,.3)}} 
+  </style>
+</head>
+<body>
+<header>
+  <a class="brand" href="../../index.html" aria-label="Back to BenOS"><b>BenOS</b><span>layout builder</span></a>
+  <select id="layoutSelect" aria-label="Saved layouts"></select>
+  <input id="layoutName" class="name" aria-label="Layout name" placeholder="Layout name" />
+  <button id="newLayout">New</button>
+  <button id="duplicateLayout">Duplicate</button>
+  <button id="deleteLayout" class="danger">Delete</button>
+  <span class="divider"></span>
+  <button id="addBlock" class="primary">Add rectangle</button>
+  <button id="fitView">Fit</button>
+  <button id="exportPng">Export PNG</button>
+  <span class="grow"></span>
+  <span id="status" class="status"></span>
+</header>
+
+<main>
+  <section id="viewport" aria-label="Layout canvas">
+    <div id="stage">
+      <div id="sheetWrap">
+        <div id="topMeasure" class="sheetLabel"></div>
+        <div id="leftMeasure" class="sheetLabel"></div>
+        <div id="sheet"><div id="ghost" class="ghost">Add a rectangle</div></div>
+      </div>
+    </div>
+  </section>
+
+  <aside>
+    <section class="panel">
+      <div class="panelTitle"><strong>Canvas</strong><span id="canvasMeta"></span></div>
+      <div class="fields">
+        <div class="field"><label>Preset</label><select id="preset"></select></div>
+        <div class="field"><label>Unit</label><select id="unit"><option>mm</option><option>cm</option><option>in</option><option>ft</option><option>px</option></select></div>
+        <div class="field"><label>Width</label><input id="canvasW" type="number" min="1" step="1"></div>
+        <div class="field"><label>Height</label><input id="canvasH" type="number" min="1" step="1"></div>
+        <div class="field"><label>Grid</label><input id="gridSize" type="number" min="1" step="1"></div>
+        <div class="field"><label>Snap</label><select id="snap"><option value="on">On</option><option value="off">Off</option></select></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panelTitle"><strong>Selection</strong><span id="selectionMeta"></span></div>
+      <div class="fields">
+        <div class="field"><label>Label</label><input id="itemLabel"></div>
+        <div class="field"><label>Color</label><input id="itemColor" type="color"></div>
+        <div class="field"><label>X</label><input id="itemX" type="number" step="1"></div>
+        <div class="field"><label>Y</label><input id="itemY" type="number" step="1"></div>
+        <div class="field"><label>Width</label><input id="itemW" type="number" min="1" step="1"></div>
+        <div class="field"><label>Height</label><input id="itemH" type="number" min="1" step="1"></div>
+      </div>
+      <div class="actions">
+        <button id="rotateItem">Rotate</button>
+        <button id="duplicateItem">Duplicate</button>
+        <button id="deleteItem" class="danger">Delete</button>
+      </div>
+      <div class="actions palette" id="palette"></div>
+    </section>
+
+    <section class="panel">
+      <div class="panelTitle"><strong>Fit</strong></div>
+      <div class="metric"><span>Rectangles</span><strong id="countMetric">0</strong></div>
+      <div class="metric"><span>Used area</span><strong id="usedMetric">0%</strong></div>
+      <div class="metric"><span>Overlaps</span><strong id="overlapMetric">0</strong></div>
+      <div class="metric"><span>Waste</span><strong id="wasteMetric">0</strong></div>
+    </section>
+
+    <section class="panel">
+      <div class="panelTitle"><strong>Rectangles</strong></div>
+      <div id="list" class="list"></div>
+    </section>
+  </aside>
+</main>
+
+<div id="toast" class="toast"></div>
+
+<script>
+(() => {
+  const KEY = "benos:layout-builder:v1";
+  const COLORS = ["#9fd0ff","#8fd694","#ffd166","#f4978e","#cdb4db","#f2e8cf","#b8f2e6","#f7a072","#bde0fe","#d0f4de","#ffcad4","#c7f9cc"];
+  const PRESETS = [
+    {id:"ply-uk", name:"Plywood 2440 x 1220", unit:"mm", w:2440, h:1220, grid:50},
+    {id:"ply-us", name:"Plywood 96 x 48", unit:"in", w:96, h:48, grid:1},
+    {id:"bedroom", name:"Bedroom 12 x 10", unit:"ft", w:12, h:10, grid:0.5},
+    {id:"a4", name:"A4 landscape", unit:"mm", w:297, h:210, grid:10},
+    {id:"screen", name:"Screen 1440 x 900", unit:"px", w:1440, h:900, grid:24}
+  ];
+  const $ = id => document.getElementById(id);
+  const sheet = $("sheet"), viewport = $("viewport"), toast = $("toast");
+  let state = load(), selectedId = state.layouts[0]?.id ? state.layouts[0].items[0]?.id || null : null;
+  let currentId = state.currentId || state.layouts[0].id;
+  let ppu = 1, zoom = 1, drag = null, saveTimer = null;
+
+  function uid(){ return crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(16).slice(2) + Date.now().toString(16); }
+  function blank(name="Untitled layout"){
+    return {id:uid(),name,unit:"mm",canvas:{w:2440,h:1220},grid:50,snap:true,items:[
+      {id:uid(),label:"Panel A",x:0,y:0,w:600,h:400,color:"#9fd0ff"},
+      {id:uid(),label:"Panel B",x:600,y:0,w:500,h:300,color:"#8fd694"}
+    ]};
+  }
+  function load(){
+    try{
+      const parsed = JSON.parse(localStorage.getItem(KEY) || "{}");
+      if (Array.isArray(parsed.layouts) && parsed.layouts.length) return parsed;
+    }catch{}
+    const first = blank("Plywood layout");
+    return {currentId:first.id,layouts:[first]};
+  }
+  function saveSoon(){ clearTimeout(saveTimer); saveTimer = setTimeout(saveNow, 80); }
+  function saveNow(){ state.currentId = current().id; localStorage.setItem(KEY, JSON.stringify(state)); renderPicker(); }
+  function current(){ return state.layouts.find(l => l.id === currentId) || state.layouts[0]; }
+  function selected(){ return current().items.find(i => i.id === selectedId) || null; }
+  function show(msg){ toast.textContent = msg; toast.classList.add("show"); clearTimeout(show.t); show.t = setTimeout(() => toast.classList.remove("show"), 1200); }
+  function esc(s){ return String(s).replace(/[<>&"]/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;",'"':"&quot;"}[c])); }
+  function fmt(n){ return Number(n).toLocaleString(undefined,{maximumFractionDigits:2}); }
+  function clamp(n,min,max){ return Math.max(min, Math.min(max, n)); }
+  function snapValue(n){ const l=current(); return l.snap ? Math.round(n / l.grid) * l.grid : n; }
+  function itemName(item){ return item.label.trim() || "Rectangle"; }
+
+  function renderPicker(){
+    const select = $("layoutSelect");
+    select.innerHTML = "";
+    for (const layout of state.layouts){
+      const opt = document.createElement("option");
+      opt.value = layout.id; opt.textContent = layout.name || "Untitled layout"; opt.selected = layout.id === currentId;
+      select.appendChild(opt);
+    }
+  }
+  function renderPresetOptions(){
+    $("preset").innerHTML = `<option value="">Custom</option>` + PRESETS.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join("");
+    $("palette").innerHTML = COLORS.map(c => `<button class="colorBtn" data-color="${c}" title="${c}" aria-label="${c}" style="background:${c}"></button>`).join("");
+  }
+  function render(){
+    const l = current();
+    $("layoutName").value = l.name || "";
+    $("unit").value = l.unit;
+    $("canvasW").value = l.canvas.w;
+    $("canvasH").value = l.canvas.h;
+    $("gridSize").value = l.grid;
+    $("snap").value = l.snap ? "on" : "off";
+    $("canvasMeta").textContent = `${fmt(l.canvas.w)} x ${fmt(l.canvas.h)} ${l.unit}`;
+    $("topMeasure").textContent = `${fmt(l.canvas.w)} ${l.unit}`;
+    $("leftMeasure").textContent = `${fmt(l.canvas.h)} ${l.unit}`;
+    calculateScale();
+    renderItems();
+    renderInspector();
+    renderMetrics();
+    renderPicker();
+  }
+  function calculateScale(){
+    const l = current();
+    const availableW = Math.max(240, viewport.clientWidth - 110);
+    const availableH = Math.max(220, viewport.clientHeight - 110);
+    const fit = Math.min(availableW / l.canvas.w, availableH / l.canvas.h);
+    ppu = Math.max(.04, fit * zoom);
+    sheet.style.width = `${l.canvas.w * ppu}px`;
+    sheet.style.height = `${l.canvas.h * ppu}px`;
+    sheet.style.setProperty("--grid-px", `${Math.max(4, l.grid * ppu)}px`);
+  }
+  function renderItems(){
+    const l = current(), overlaps = overlapIds();
+    sheet.querySelectorAll(".block").forEach(el => el.remove());
+    $("ghost").style.display = l.items.length ? "none" : "grid";
+    for (const item of l.items){
+      const el = document.createElement("article");
+      el.className = `block${item.id === selectedId ? " selected" : ""}${overlaps.has(item.id) ? " overlap" : ""}`;
+      el.dataset.id = item.id;
+      el.style.left = `${item.x * ppu}px`;
+      el.style.top = `${item.y * ppu}px`;
+      el.style.width = `${item.w * ppu}px`;
+      el.style.height = `${item.h * ppu}px`;
+      el.style.setProperty("--block", item.color || COLORS[0]);
+      el.innerHTML = `<div class="body"><div><b>${esc(itemName(item))}</b><span>${fmt(item.w)} x ${fmt(item.h)} ${l.unit}</span></div></div><div class="edge w">${fmt(item.w)}</div><div class="edge h">${fmt(item.h)}</div><div class="handle" aria-hidden="true"></div>`;
+      sheet.appendChild(el);
+    }
+  }
+  function renderInspector(){
+    const item = selected();
+    renderList();
+    $("selectionMeta").textContent = item ? `${fmt(item.w)} x ${fmt(item.h)} ${current().unit}` : "None";
+    for (const id of ["itemLabel","itemColor","itemX","itemY","itemW","itemH"]) $(id).disabled = !item;
+    for (const id of ["rotateItem","duplicateItem","deleteItem"]) $(id).disabled = !item;
+    document.querySelectorAll(".colorBtn").forEach(btn => btn.classList.toggle("active", item && btn.dataset.color === item.color));
+    if (!item){
+      $("itemLabel").value = ""; $("itemColor").value = "#9fd0ff"; $("itemX").value = ""; $("itemY").value = ""; $("itemW").value = ""; $("itemH").value = "";
+      return;
+    }
+    $("itemLabel").value = item.label;
+    $("itemColor").value = item.color || COLORS[0];
+    $("itemX").value = item.x;
+    $("itemY").value = item.y;
+    $("itemW").value = item.w;
+    $("itemH").value = item.h;
+  }
+  function renderList(){
+    const l = current(), list = $("list");
+    if (!l.items.length){ list.innerHTML = `<div class="row"><span></span><span>No rectangles</span><span></span></div>`; return; }
+    list.innerHTML = l.items.map(item => `<div class="row${item.id === selectedId ? " selected" : ""}" data-id="${item.id}"><span class="swatch" style="background:${item.color}"></span><div><b>${esc(itemName(item))}</b><span>${fmt(item.x)}, ${fmt(item.y)} - ${fmt(item.w)} x ${fmt(item.h)}</span></div><button data-copy="${item.id}">Copy</button></div>`).join("");
+  }
+  function renderMetrics(){
+    const l = current(), canvasArea = l.canvas.w * l.canvas.h;
+    const used = l.items.reduce((sum,i) => sum + i.w * i.h, 0);
+    const overlapCount = countOverlaps();
+    $("countMetric").textContent = l.items.length;
+    $("usedMetric").textContent = canvasArea ? `${Math.min(999, used / canvasArea * 100).toFixed(1)}%` : "0%";
+    $("overlapMetric").textContent = overlapCount;
+    $("wasteMetric").textContent = `${fmt(Math.max(0, canvasArea - used))} ${l.unit}^2`;
+    $("status").textContent = overlapCount ? `${overlapCount} overlap${overlapCount === 1 ? "" : "s"}` : "No overlaps";
+    $("status").style.color = overlapCount ? "var(--danger)" : "var(--muted)";
+  }
+  function overlaps(a,b){ return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y; }
+  function overlapIds(){
+    const ids = new Set(), items = current().items;
+    for (let i=0;i<items.length;i++) for (let j=i+1;j<items.length;j++) if (overlaps(items[i],items[j])){ ids.add(items[i].id); ids.add(items[j].id); }
+    return ids;
+  }
+  function countOverlaps(){
+    const items = current().items; let total = 0;
+    for (let i=0;i<items.length;i++) for (let j=i+1;j<items.length;j++) if (overlaps(items[i],items[j])) total++;
+    return total;
+  }
+  function updateItem(patch){
+    const item = selected(); if (!item) return;
+    const l = current();
+    Object.assign(item, patch);
+    item.w = Math.max(1, Number(item.w) || 1); item.h = Math.max(1, Number(item.h) || 1);
+    item.x = clamp(Number(item.x) || 0, 0, Math.max(0, l.canvas.w - item.w));
+    item.y = clamp(Number(item.y) || 0, 0, Math.max(0, l.canvas.h - item.h));
+    saveSoon(); render();
+  }
+  function clampItemsToCanvas(){
+    const l = current();
+    for (const item of l.items){
+      item.w = Math.min(Math.max(1, Number(item.w) || 1), l.canvas.w);
+      item.h = Math.min(Math.max(1, Number(item.h) || 1), l.canvas.h);
+      item.x = clamp(Number(item.x) || 0, 0, Math.max(0, l.canvas.w - item.w));
+      item.y = clamp(Number(item.y) || 0, 0, Math.max(0, l.canvas.h - item.h));
+    }
+  }
+  function addItem(seed={}){
+    const l = current(), size = Math.max(l.grid * 4, Math.min(l.canvas.w, l.canvas.h) * .18);
+    const item = {id:uid(),label:`Rectangle ${l.items.length + 1}`,x:0,y:0,w:Math.round(size),h:Math.round(size*.65),color:COLORS[l.items.length % COLORS.length],...seed};
+    item.x = clamp(snapValue(item.x), 0, Math.max(0, l.canvas.w - item.w));
+    item.y = clamp(snapValue(item.y), 0, Math.max(0, l.canvas.h - item.h));
+    l.items.push(item); selectedId = item.id; saveSoon(); render();
+  }
+  function duplicateItem(id=selectedId){
+    const l = current(), item = l.items.find(i => i.id === id); if (!item) return;
+    addItem({...structuredClone(item),id:uid(),label:`${itemName(item)} copy`,x:item.x + l.grid,y:item.y + l.grid});
+  }
+  function deleteItem(){
+    const l = current();
+    l.items = l.items.filter(i => i.id !== selectedId);
+    selectedId = l.items[0]?.id || null;
+    saveSoon(); render();
+  }
+  function applyPreset(id){
+    const preset = PRESETS.find(p => p.id === id); if (!preset) return;
+    const l = current();
+    l.unit = preset.unit; l.canvas = {w:preset.w,h:preset.h}; l.grid = preset.grid; l.snap = true;
+    clampItemsToCanvas();
+    selectedId = null; saveSoon(); render();
+  }
+  function switchLayout(id){
+    currentId = id; selectedId = current().items[0]?.id || null; zoom = 1; saveSoon(); render();
+  }
+  function point(e){
+    const rect = sheet.getBoundingClientRect();
+    return {x:(e.clientX - rect.left) / ppu, y:(e.clientY - rect.top) / ppu};
+  }
+  function startDrag(e){
+    const block = e.target.closest(".block"); if (!block) return;
+    selectedId = block.dataset.id;
+    const item = selected(); if (!item) return;
+    const p = point(e), resizing = !!e.target.closest(".handle");
+    drag = {pointerId:e.pointerId,resizing,start:p,x:item.x,y:item.y,w:item.w,h:item.h};
+    block.setPointerCapture(e.pointerId);
+    render();
+  }
+  function moveDrag(e){
+    if (!drag || e.pointerId !== drag.pointerId) return;
+    const item = selected(), l = current(), p = point(e); if (!item) return;
+    const dx = p.x - drag.start.x, dy = p.y - drag.start.y;
+    if (drag.resizing){
+      item.w = clamp(snapValue(drag.w + dx), 1, l.canvas.w - item.x);
+      item.h = clamp(snapValue(drag.h + dy), 1, l.canvas.h - item.y);
+    } else {
+      item.x = clamp(snapValue(drag.x + dx), 0, Math.max(0, l.canvas.w - item.w));
+      item.y = clamp(snapValue(drag.y + dy), 0, Math.max(0, l.canvas.h - item.h));
+    }
+    saveSoon(); renderItems(); renderInspector(); renderMetrics();
+  }
+  function stopDrag(e){ if (drag && e.pointerId === drag.pointerId) drag = null; }
+  function fit(){ zoom = 1; calculateScale(); renderItems(); show("View fitted"); }
+  function exportPNG(){
+    const l = current(), scale = 2, maxPixels = 4200;
+    const outScale = Math.min(maxPixels / l.canvas.w, maxPixels / l.canvas.h, scale);
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(l.canvas.w * outScale));
+    canvas.height = Math.max(1, Math.round(l.canvas.h * outScale));
+    const ctx = canvas.getContext("2d");
+    ctx.scale(outScale,outScale);
+    ctx.fillStyle = "#f7f3e8"; ctx.fillRect(0,0,l.canvas.w,l.canvas.h);
+    ctx.strokeStyle = "#d0c6ad"; ctx.lineWidth = 2; ctx.strokeRect(1,1,l.canvas.w-2,l.canvas.h-2);
+    ctx.strokeStyle = "rgba(73,90,108,.22)"; ctx.lineWidth = 1;
+    for (let x=l.grid;x<l.canvas.w;x+=l.grid){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,l.canvas.h); ctx.stroke(); }
+    for (let y=l.grid;y<l.canvas.h;y+=l.grid){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(l.canvas.w,y); ctx.stroke(); }
+    const overlapsSet = overlapIds();
+    for (const item of l.items){
+      ctx.fillStyle = item.color || COLORS[0]; ctx.strokeStyle = overlapsSet.has(item.id) ? "#bb3030" : "rgba(29,37,45,.72)"; ctx.lineWidth = 2;
+      ctx.fillRect(item.x,item.y,item.w,item.h); ctx.strokeRect(item.x,item.y,item.w,item.h);
+      ctx.fillStyle = "#101820"; ctx.font = `${Math.max(10, Math.min(20, item.h / 5))}px monospace`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText(itemName(item), item.x + item.w / 2, item.y + item.h / 2 - 8, Math.max(20, item.w - 12));
+      ctx.font = `${Math.max(9, Math.min(16, item.h / 6))}px monospace`;
+      ctx.fillText(`${fmt(item.w)} x ${fmt(item.h)} ${l.unit}`, item.x + item.w / 2, item.y + item.h / 2 + 12, Math.max(20, item.w - 12));
+    }
+    const a = document.createElement("a");
+    a.href = canvas.toDataURL("image/png");
+    a.download = `${(l.name || "layout").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"") || "layout"}.png`;
+    a.click();
+    show("PNG exported");
+  }
+
+  $("layoutSelect").addEventListener("change", e => switchLayout(e.target.value));
+  $("layoutName").addEventListener("input", e => { current().name = e.target.value; saveSoon(); renderPicker(); });
+  $("newLayout").addEventListener("click", () => { const l = blank(); state.layouts.unshift(l); currentId = l.id; selectedId = l.items[0]?.id || null; zoom = 1; saveSoon(); render(); });
+  $("duplicateLayout").addEventListener("click", () => { const copy = structuredClone(current()); copy.id = uid(); copy.name = `${copy.name || "Untitled layout"} copy`; copy.items.forEach(i => i.id = uid()); state.layouts.unshift(copy); currentId = copy.id; selectedId = copy.items[0]?.id || null; saveSoon(); render(); });
+  $("deleteLayout").addEventListener("click", () => { if (state.layouts.length === 1) return show("Keep at least one layout"); if (!confirm(`Delete "${current().name || "Untitled layout"}"?`)) return; state.layouts = state.layouts.filter(l => l.id !== currentId); currentId = state.layouts[0].id; selectedId = current().items[0]?.id || null; saveSoon(); render(); });
+  $("addBlock").addEventListener("click", () => addItem());
+  $("fitView").addEventListener("click", fit);
+  $("exportPng").addEventListener("click", exportPNG);
+  $("preset").addEventListener("change", e => applyPreset(e.target.value));
+  $("unit").addEventListener("change", e => { current().unit = e.target.value; saveSoon(); render(); });
+  $("canvasW").addEventListener("change", e => { current().canvas.w = Math.max(1, Number(e.target.value) || 1); clampItemsToCanvas(); saveSoon(); render(); });
+  $("canvasH").addEventListener("change", e => { current().canvas.h = Math.max(1, Number(e.target.value) || 1); clampItemsToCanvas(); saveSoon(); render(); });
+  $("gridSize").addEventListener("change", e => { current().grid = Math.max(.01, Number(e.target.value) || 1); saveSoon(); render(); });
+  $("snap").addEventListener("change", e => { current().snap = e.target.value === "on"; saveSoon(); render(); });
+  $("itemLabel").addEventListener("input", e => { const item = selected(); if (!item) return; item.label = e.target.value; saveSoon(); renderItems(); renderList(); });
+  $("itemColor").addEventListener("input", e => { const item = selected(); if (!item) return; item.color = e.target.value; saveSoon(); renderItems(); renderList(); });
+  $("itemX").addEventListener("change", e => updateItem({x:snapValue(Number(e.target.value) || 0)}));
+  $("itemY").addEventListener("change", e => updateItem({y:snapValue(Number(e.target.value) || 0)}));
+  $("itemW").addEventListener("change", e => updateItem({w:snapValue(Number(e.target.value) || 1)}));
+  $("itemH").addEventListener("change", e => updateItem({h:snapValue(Number(e.target.value) || 1)}));
+  $("rotateItem").addEventListener("click", () => { const i = selected(); if (!i) return; updateItem({w:i.h,h:i.w}); });
+  $("duplicateItem").addEventListener("click", () => duplicateItem());
+  $("deleteItem").addEventListener("click", deleteItem);
+  $("palette").addEventListener("click", e => { const btn = e.target.closest("[data-color]"); if (btn) updateItem({color:btn.dataset.color}); });
+  $("list").addEventListener("click", e => { const copy = e.target.closest("[data-copy]"); if (copy){ duplicateItem(copy.dataset.copy); return; } const row = e.target.closest("[data-id]"); if (row){ selectedId = row.dataset.id; render(); } });
+  sheet.addEventListener("pointerdown", startDrag);
+  sheet.addEventListener("pointermove", moveDrag);
+  sheet.addEventListener("pointerup", stopDrag);
+  sheet.addEventListener("pointercancel", stopDrag);
+  sheet.addEventListener("click", e => { if (e.target === sheet){ selectedId = null; render(); } });
+  viewport.addEventListener("wheel", e => { if (!e.ctrlKey && !e.metaKey) return; e.preventDefault(); zoom = clamp(zoom + (e.deltaY < 0 ? .1 : -.1), .35, 3); calculateScale(); renderItems(); }, {passive:false});
+  window.addEventListener("resize", render);
+  document.addEventListener("keydown", e => {
+    if (e.target.matches("input,select")) return;
+    if (e.key === "Delete" || e.key === "Backspace") deleteItem();
+    if (e.key.toLowerCase() === "r"){ const i = selected(); if (i) updateItem({w:i.h,h:i.w}); }
+  });
+
+  renderPresetOptions();
+  render();
+})();
+</script>
+</body>
+</html>

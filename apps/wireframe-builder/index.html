@@ -1,0 +1,379 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>BenOS - Wireframe Builder</title>
+  <style>
+    :root{
+      --bg:#0b0d10;--panel:#11151b;--panel2:#0f1318;--text:#e6edf3;--muted:#9aa4af;--border:#243041;
+      --accent:#6ee7ff;--danger:#ff6b6b;--paper:#fbfbfd;--ink:#18212b;
+      --mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
+      --sans:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hidden}
+    header{height:62px;display:flex;gap:8px;align-items:center;padding:10px 12px;border-bottom:1px solid var(--border);background:rgba(11,13,16,.97);position:relative;z-index:5;flex-wrap:wrap}
+    .brand{display:flex;align-items:baseline;gap:10px;margin-right:4px;font-family:var(--mono);text-decoration:none}.brand b{color:var(--accent)}.brand span{color:var(--muted);font-size:12px}.brand:visited{color:inherit}
+    button,select,input,textarea{border:1px solid var(--border);background:var(--panel);color:var(--text);border-radius:8px;font-family:var(--mono);font-size:12px;outline:none}
+    button,select,input{height:36px;padding:8px 10px}button{cursor:pointer;white-space:nowrap}button:hover,select:hover,input:focus,textarea:focus{border-color:#38506e}.primary{border-color:#2a8aa0}.danger{border-color:#7a2f2f;color:#ffd1d1}
+    .divider{height:26px;border-left:1px solid var(--border);margin:0 2px}.name{width:185px;background:var(--panel2)}.grow{margin-left:auto}.status{font:12px var(--mono);color:var(--muted);min-width:160px;text-align:right}
+    main{height:calc(100vh - 62px);display:grid;grid-template-columns:280px 1fr 330px;min-height:0}
+    aside{background:var(--panel2);overflow:auto}.left{border-right:1px solid var(--border)}.right{border-left:1px solid var(--border)}
+    .panel{border-bottom:1px solid var(--border);padding:12px}.panelTitle{display:flex;align-items:center;gap:8px;margin-bottom:10px;font:12px var(--mono);color:var(--muted)}.panelTitle strong{color:var(--text);font-weight:700}.panelTitle span:last-child{margin-left:auto}
+    .fields{display:grid;grid-template-columns:1fr 1fr;gap:8px}.fields.one{grid-template-columns:1fr}.field label{display:block;margin-bottom:5px;font:11px var(--mono);color:var(--muted)}.field input,.field select,.field textarea{width:100%;background:rgba(0,0,0,.18)}.field textarea{height:160px;resize:vertical;padding:9px;line-height:1.45}
+    .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.actions button{flex:1 1 auto}
+    .tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.tab{height:34px;padding:6px}.tab.active{border-color:#2a8aa0;background:#13242b;color:#d9fbff}
+    .list{display:grid;gap:8px}.row{border:1px solid var(--border);background:var(--panel);border-radius:8px;padding:8px;display:grid;grid-template-columns:18px 1fr auto;gap:8px;align-items:center;cursor:pointer}.row.selected{border-color:#2a8aa0}.row.hidden{opacity:.5}.swatch{width:18px;height:18px;border-radius:5px;border:1px solid rgba(255,255,255,.25)}.row b{display:block;font:12px var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.row span{font:11px var(--mono);color:var(--muted)}.row button{height:28px;padding:4px 7px}
+    .viewport{position:relative;overflow:auto;background:#10151c;background-image:radial-gradient(circle at 1px 1px,#243142 1px,transparent 0);background-size:24px 24px}
+    #stage{position:relative;min-width:100%;min-height:100%;display:grid;place-items:center;padding:42px}
+    #pageWrap{position:relative;filter:drop-shadow(0 18px 28px rgba(0,0,0,.28))}
+    #page{position:relative;background:var(--paper);color:var(--ink);border:1px solid #d5dbe3;overflow:hidden;touch-action:none}
+    #page.grid::before{content:"";position:absolute;inset:0;background-image:linear-gradient(to right,rgba(90,108,130,.13) 1px,transparent 1px),linear-gradient(to bottom,rgba(90,108,130,.13) 1px,transparent 1px);background-size:var(--grid) var(--grid);pointer-events:none;z-index:0}
+    .pageLabel{position:absolute;left:50%;top:-34px;transform:translateX(-50%);font:12px var(--mono);color:#d7e1ea;background:rgba(11,13,16,.92);border:1px solid var(--border);border-radius:999px;padding:5px 9px;white-space:nowrap}
+    .block{position:absolute;background:var(--block,#dbeafe);border:1px solid var(--stroke,rgba(24,33,43,.34));border-radius:var(--radius,6px);cursor:grab;touch-action:none;z-index:1;overflow:hidden}
+    .block.selected{outline:3px solid #11151b;outline-offset:3px}.block:active{cursor:grabbing}.block.hidden{display:none}.block .body{position:absolute;inset:0;display:grid;align-content:center;justify-items:center;text-align:center;padding:7px;pointer-events:none}.block b{font:700 12px/1.2 var(--mono);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.block span{font:10px/1.2 var(--mono);color:rgba(24,33,43,.62);margin-top:3px}.handle{position:absolute;right:-7px;bottom:-7px;width:14px;height:14px;border:2px solid #11151b;border-radius:50%;background:var(--accent);cursor:nwse-resize;pointer-events:auto}
+    .empty{position:absolute;inset:18px;border:1px dashed #98a5b5;border-radius:12px;display:grid;place-items:center;color:#65717f;font:12px var(--mono);z-index:0}
+    .palette{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}.colorBtn{height:28px;border-radius:8px;padding:0}.colorBtn.active{outline:2px solid var(--accent);outline-offset:2px}
+    .metric{display:grid;grid-template-columns:1fr auto;gap:8px;font:12px var(--mono);color:var(--muted);padding:4px 0}.metric strong{color:var(--text);font-weight:700}
+    .code{height:260px;white-space:pre;overflow:auto;color:#d7e1ea}
+    .toast{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);background:rgba(17,21,27,.96);border:1px solid var(--border);padding:10px 13px;border-radius:999px;font:12px var(--mono);opacity:0;pointer-events:none;transition:.16s;z-index:10}.toast.show{opacity:1}
+    @media(max-width:1120px){header{height:104px}main{height:calc(100vh - 104px);grid-template-columns:240px 1fr}.right{position:absolute;right:0;top:104px;bottom:0;width:320px;max-width:88vw;z-index:4;box-shadow:-18px 0 28px rgba(0,0,0,.3)}.grow,.status{display:none}}
+  </style>
+</head>
+<body>
+<header>
+  <a class="brand" href="../../index.html" aria-label="Back to BenOS"><b>BenOS</b><span>wireframe builder</span></a>
+  <select id="projectSelect" aria-label="Saved wireframes"></select>
+  <input id="projectName" class="name" aria-label="Wireframe name" placeholder="Wireframe name" />
+  <button id="newProject">New</button>
+  <button id="duplicateProject">Duplicate</button>
+  <button id="deleteProject" class="danger">Delete</button>
+  <span class="divider"></span>
+  <button id="addBlock" class="primary">Add div</button>
+  <button id="copyBreakpoint">Copy layout</button>
+  <button id="fitView">Fit</button>
+  <span class="grow"></span>
+  <span id="status" class="status"></span>
+</header>
+
+<main>
+  <aside class="left">
+    <section class="panel">
+      <div class="panelTitle"><strong>Breakpoint</strong></div>
+      <div class="tabs" id="tabs"></div>
+    </section>
+    <section class="panel">
+      <div class="panelTitle"><strong>Elements</strong><span id="count"></span></div>
+      <div id="list" class="list"></div>
+    </section>
+  </aside>
+
+  <section class="viewport" id="viewport">
+    <div id="stage">
+      <div id="pageWrap">
+        <div id="pageLabel" class="pageLabel"></div>
+        <div id="page" class="grid"><div id="empty" class="empty">Add div</div></div>
+      </div>
+    </div>
+  </section>
+
+  <aside class="right">
+    <section class="panel">
+      <div class="panelTitle"><strong>Page</strong><span id="pageMeta"></span></div>
+      <div class="fields">
+        <div class="field"><label>Width</label><input id="pageW" type="number" min="1" step="1"></div>
+        <div class="field"><label>Height</label><input id="pageH" type="number" min="1" step="1"></div>
+        <div class="field"><label>Grid</label><input id="gridSize" type="number" min="1" step="1"></div>
+        <div class="field"><label>Snap</label><select id="snap"><option value="on">On</option><option value="off">Off</option></select></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panelTitle"><strong>Selection</strong><span id="selectionMeta"></span></div>
+      <div class="fields">
+        <div class="field"><label>Name</label><input id="itemLabel"></div>
+        <div class="field"><label>Tag</label><select id="itemTag"><option>div</option><option>header</option><option>main</option><option>section</option><option>nav</option><option>aside</option><option>footer</option><option>button</option></select></div>
+        <div class="field"><label>X</label><input id="itemX" type="number" step="1"></div>
+        <div class="field"><label>Y</label><input id="itemY" type="number" step="1"></div>
+        <div class="field"><label>Width</label><input id="itemW" type="number" min="1" step="1"></div>
+        <div class="field"><label>Height</label><input id="itemH" type="number" min="1" step="1"></div>
+        <div class="field"><label>Radius</label><input id="itemRadius" type="number" min="0" step="1"></div>
+        <div class="field"><label>Visible</label><select id="itemVisible"><option value="yes">Yes</option><option value="no">No</option></select></div>
+      </div>
+      <div class="actions">
+        <button id="duplicateItem">Duplicate</button>
+        <button id="deleteItem" class="danger">Delete</button>
+      </div>
+      <div class="actions palette" id="palette"></div>
+    </section>
+
+    <section class="panel">
+      <div class="panelTitle"><strong>Summary</strong></div>
+      <div class="metric"><span>Elements</span><strong id="elementMetric">0</strong></div>
+      <div class="metric"><span>Visible here</span><strong id="visibleMetric">0</strong></div>
+      <div class="metric"><span>Breakpoint</span><strong id="breakpointMetric">Desktop</strong></div>
+    </section>
+
+    <section class="panel">
+      <div class="panelTitle"><strong>Export</strong></div>
+      <textarea id="code" class="code" spellcheck="false"></textarea>
+      <div class="actions">
+        <button id="copyCode">Copy code</button>
+      </div>
+    </section>
+  </aside>
+</main>
+
+<div id="toast" class="toast"></div>
+
+<script>
+(() => {
+  const KEY = "benos:wireframe-builder:v1";
+  const BREAKPOINTS = [
+    {id:"desktop",name:"Desktop",w:1440,h:900},
+    {id:"tablet",name:"Tablet",w:768,h:1024},
+    {id:"mobile",name:"Mobile",w:390,h:844}
+  ];
+  const COLORS = ["#dbeafe","#dcfce7","#fef3c7","#fee2e2","#ede9fe","#e0f2fe","#fce7f3","#f3f4f6","#cffafe","#ffedd5","#ccfbf1","#e5e7eb"];
+  const $ = id => document.getElementById(id);
+  const page = $("page"), viewport = $("viewport"), toast = $("toast");
+  let state = load(), currentId = state.currentId || state.projects[0].id, bp = state.breakpoint || "desktop", selectedId = null;
+  let ppu = 1, zoom = 1, drag = null, saveTimer = null;
+
+  function uid(){ return crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(16).slice(2) + Date.now().toString(16); }
+  function blank(name="Untitled wireframe"){
+    const hero = uid(), nav = uid(), card = uid(), cta = uid();
+    return {
+      id:uid(),name,grid:24,snap:true,
+      pages:{desktop:{w:1440,h:900},tablet:{w:768,h:1024},mobile:{w:390,h:844}},
+      items:[
+        {id:nav,label:"nav",tag:"nav",color:"#e0f2fe",radius:8,frames:{desktop:{x:64,y:32,w:1312,h:72,visible:true},tablet:{x:32,y:28,w:704,h:72,visible:true},mobile:{x:20,y:20,w:350,h:64,visible:true}}},
+        {id:hero,label:"hero",tag:"section",color:"#dbeafe",radius:8,frames:{desktop:{x:64,y:132,w:820,h:360,visible:true},tablet:{x:32,y:124,w:704,h:320,visible:true},mobile:{x:20,y:104,w:350,h:260,visible:true}}},
+        {id:card,label:"feature card",tag:"section",color:"#dcfce7",radius:8,frames:{desktop:{x:920,y:132,w:376,h:210,visible:true},tablet:{x:32,y:468,w:704,h:180,visible:true},mobile:{x:20,y:388,w:350,h:160,visible:true}}},
+        {id:cta,label:"cta",tag:"button",color:"#fef3c7",radius:8,frames:{desktop:{x:920,y:372,w:220,h:64,visible:true},tablet:{x:32,y:680,w:260,h:64,visible:true},mobile:{x:20,y:580,w:210,h:56,visible:true}}}
+      ]
+    };
+  }
+  function load(){
+    try{
+      const parsed = JSON.parse(localStorage.getItem(KEY) || "{}");
+      if (Array.isArray(parsed.projects) && parsed.projects.length) return parsed;
+    }catch{}
+    const first = blank("Landing page wireframe");
+    return {currentId:first.id,breakpoint:"desktop",projects:[first]};
+  }
+  function saveSoon(){ clearTimeout(saveTimer); saveTimer = setTimeout(saveNow, 80); }
+  function saveNow(){ state.currentId = current().id; state.breakpoint = bp; localStorage.setItem(KEY, JSON.stringify(state)); renderPicker(); }
+  function current(){ return state.projects.find(p => p.id === currentId) || state.projects[0]; }
+  function selected(){ return current().items.find(i => i.id === selectedId) || null; }
+  function breakpoint(){ return BREAKPOINTS.find(b => b.id === bp) || BREAKPOINTS[0]; }
+  function frame(item,id=bp){ return item.frames[id] || (item.frames[id] = scaledFrame(item, id)); }
+  function show(msg){ toast.textContent = msg; toast.classList.add("show"); clearTimeout(show.t); show.t = setTimeout(() => toast.classList.remove("show"), 1200); }
+  function esc(s){ return String(s).replace(/[<>&"]/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;",'"':"&quot;"}[c])); }
+  function slug(s){ return String(s || "block").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"") || "block"; }
+  function clamp(n,min,max){ return Math.max(min, Math.min(max, n)); }
+  function snapValue(n){ const p=current(); return p.snap ? Math.round(n / p.grid) * p.grid : n; }
+  function scaledFrame(item,id){
+    const source = item.frames.desktop || Object.values(item.frames)[0] || {x:0,y:0,w:200,h:120,visible:true};
+    const from = current().pages.desktop || BREAKPOINTS[0], to = current().pages[id] || breakpoint();
+    return {x:Math.round(source.x * to.w / from.w),y:Math.round(source.y * to.h / from.h),w:Math.round(source.w * to.w / from.w),h:Math.round(source.h * to.h / from.h),visible:source.visible !== false};
+  }
+  function itemName(item){ return item.label.trim() || item.tag || "div"; }
+  function renderPicker(){
+    $("projectSelect").innerHTML = state.projects.map(p => `<option value="${p.id}"${p.id === currentId ? " selected" : ""}>${esc(p.name || "Untitled wireframe")}</option>`).join("");
+  }
+  function renderStatic(){
+    $("tabs").innerHTML = BREAKPOINTS.map(b => `<button class="tab${b.id === bp ? " active" : ""}" data-bp="${b.id}">${b.name}</button>`).join("");
+    $("palette").innerHTML = COLORS.map(c => `<button class="colorBtn" data-color="${c}" title="${c}" aria-label="${c}" style="background:${c}"></button>`).join("");
+  }
+  function render(){
+    const p = current(), pageData = p.pages[bp] || breakpoint();
+    $("projectName").value = p.name || "";
+    $("pageW").value = pageData.w; $("pageH").value = pageData.h; $("gridSize").value = p.grid; $("snap").value = p.snap ? "on" : "off";
+    $("pageMeta").textContent = `${pageData.w} x ${pageData.h}`;
+    $("pageLabel").textContent = `${breakpoint().name} - ${pageData.w} x ${pageData.h}`;
+    $("breakpointMetric").textContent = breakpoint().name;
+    renderStatic();
+    calculateScale();
+    renderBlocks();
+    renderList();
+    renderInspector();
+    renderCode();
+    renderPicker();
+  }
+  function calculateScale(){
+    const pageData = current().pages[bp] || breakpoint();
+    const availableW = Math.max(240, viewport.clientWidth - 110);
+    const availableH = Math.max(220, viewport.clientHeight - 110);
+    ppu = Math.max(.18, Math.min(availableW / pageData.w, availableH / pageData.h) * zoom);
+    page.style.width = `${pageData.w * ppu}px`;
+    page.style.height = `${pageData.h * ppu}px`;
+    page.style.setProperty("--grid", `${Math.max(4, current().grid * ppu)}px`);
+  }
+  function renderBlocks(){
+    const p = current();
+    page.querySelectorAll(".block").forEach(el => el.remove());
+    $("empty").style.display = p.items.length ? "none" : "grid";
+    for (const item of p.items){
+      const f = frame(item);
+      const el = document.createElement("article");
+      el.className = `block${item.id === selectedId ? " selected" : ""}${f.visible === false ? " hidden" : ""}`;
+      el.dataset.id = item.id;
+      el.style.left = `${f.x * ppu}px`; el.style.top = `${f.y * ppu}px`; el.style.width = `${f.w * ppu}px`; el.style.height = `${f.h * ppu}px`;
+      el.style.setProperty("--block", item.color || COLORS[0]); el.style.setProperty("--radius", `${item.radius || 0}px`);
+      el.innerHTML = `<div class="body"><b>${esc(itemName(item))}</b><span>${item.tag} - ${f.w} x ${f.h}</span></div><div class="handle"></div>`;
+      page.appendChild(el);
+    }
+    $("elementMetric").textContent = p.items.length;
+    $("visibleMetric").textContent = p.items.filter(i => frame(i).visible !== false).length;
+    $("count").textContent = p.items.length;
+    $("status").textContent = `${breakpoint().name} ${current().pages[bp].w}px`;
+  }
+  function renderList(){
+    const p = current(), list = $("list");
+    if (!p.items.length){ list.innerHTML = `<div class="row"><span></span><span>No elements</span><span></span></div>`; return; }
+    list.innerHTML = p.items.map(item => {
+      const f = frame(item);
+      return `<div class="row${item.id === selectedId ? " selected" : ""}${f.visible === false ? " hidden" : ""}" data-id="${item.id}"><span class="swatch" style="background:${item.color}"></span><div><b>${esc(itemName(item))}</b><span>${item.tag} - ${f.w} x ${f.h}</span></div><button data-copy="${item.id}">Copy</button></div>`;
+    }).join("");
+  }
+  function renderInspector(){
+    const item = selected(), f = item ? frame(item) : null;
+    $("selectionMeta").textContent = item ? `${item.tag} - ${f.w} x ${f.h}` : "None";
+    for (const id of ["itemLabel","itemTag","itemX","itemY","itemW","itemH","itemRadius","itemVisible"]) $(id).disabled = !item;
+    for (const id of ["duplicateItem","deleteItem"]) $(id).disabled = !item;
+    document.querySelectorAll(".colorBtn").forEach(btn => btn.classList.toggle("active", item && btn.dataset.color === item.color));
+    if (!item){
+      $("itemLabel").value = ""; $("itemTag").value = "div"; $("itemX").value = ""; $("itemY").value = ""; $("itemW").value = ""; $("itemH").value = ""; $("itemRadius").value = ""; $("itemVisible").value = "yes";
+      return;
+    }
+    $("itemLabel").value = item.label; $("itemTag").value = item.tag; $("itemX").value = f.x; $("itemY").value = f.y; $("itemW").value = f.w; $("itemH").value = f.h; $("itemRadius").value = item.radius || 0; $("itemVisible").value = f.visible === false ? "no" : "yes";
+  }
+  function updateFrame(patch){
+    const item = selected(); if (!item) return;
+    const p = current(), pageData = p.pages[bp], f = frame(item);
+    Object.assign(f, patch);
+    f.w = Math.max(1, Number(f.w) || 1); f.h = Math.max(1, Number(f.h) || 1);
+    f.x = clamp(Number(f.x) || 0, 0, Math.max(0, pageData.w - f.w));
+    f.y = clamp(Number(f.y) || 0, 0, Math.max(0, pageData.h - f.h));
+    saveSoon(); render();
+  }
+  function updateItem(patch){
+    const item = selected(); if (!item) return;
+    Object.assign(item, patch);
+    saveSoon(); render();
+  }
+  function addItem(seed={}){
+    const p = current(), pageData = p.pages[bp], size = Math.max(p.grid * 5, Math.min(320, pageData.w * .24));
+    const item = {id:uid(),label:`div ${p.items.length + 1}`,tag:"div",color:COLORS[p.items.length % COLORS.length],radius:6,frames:{},...seed};
+    item.frames[bp] = {x:0,y:0,w:Math.round(size),h:Math.round(size*.55),visible:true,...(seed.frames?.[bp] || {})};
+    p.items.push(item); selectedId = item.id; saveSoon(); render();
+  }
+  function duplicateItem(id=selectedId){
+    const source = current().items.find(i => i.id === id); if (!source) return;
+    const copy = structuredClone(source);
+    copy.id = uid(); copy.label = `${itemName(source)} copy`;
+    for (const f of Object.values(copy.frames)){ f.x += current().grid; f.y += current().grid; }
+    current().items.push(copy); selectedId = copy.id; saveSoon(); render();
+  }
+  function deleteItem(){
+    const p = current(); if (!selectedId) return;
+    p.items = p.items.filter(i => i.id !== selectedId); selectedId = p.items[0]?.id || null; saveSoon(); render();
+  }
+  function copyBreakpoint(){
+    const from = prompt("Copy from breakpoint: desktop, tablet, or mobile", "desktop");
+    if (!from || !BREAKPOINTS.some(b => b.id === from) || from === bp) return;
+    const p = current(), srcPage = p.pages[from], dstPage = p.pages[bp];
+    for (const item of p.items){
+      const src = frame(item, from);
+      item.frames[bp] = {x:Math.round(src.x * dstPage.w / srcPage.w),y:Math.round(src.y * dstPage.h / srcPage.h),w:Math.round(src.w * dstPage.w / srcPage.w),h:Math.round(src.h * dstPage.h / srcPage.h),visible:src.visible !== false};
+    }
+    saveSoon(); render(); show("Layout copied");
+  }
+  function clampFrames(){
+    const p = current();
+    for (const item of p.items) for (const id of Object.keys(p.pages)){
+      const pageData = p.pages[id], f = frame(item,id);
+      f.w = Math.min(Math.max(1, f.w), pageData.w); f.h = Math.min(Math.max(1, f.h), pageData.h);
+      f.x = clamp(f.x, 0, Math.max(0, pageData.w - f.w)); f.y = clamp(f.y, 0, Math.max(0, pageData.h - f.h));
+    }
+  }
+  function point(e){ const rect = page.getBoundingClientRect(); return {x:(e.clientX - rect.left) / ppu, y:(e.clientY - rect.top) / ppu}; }
+  function startDrag(e){
+    const block = e.target.closest(".block"); if (!block) return;
+    selectedId = block.dataset.id;
+    const item = selected(), f = frame(item), p = point(e);
+    drag = {pointerId:e.pointerId,resizing:!!e.target.closest(".handle"),start:p,x:f.x,y:f.y,w:f.w,h:f.h};
+    block.setPointerCapture(e.pointerId); render();
+  }
+  function moveDrag(e){
+    if (!drag || e.pointerId !== drag.pointerId) return;
+    const item = selected(), f = frame(item), pageData = current().pages[bp], p = point(e); if (!item) return;
+    const dx = p.x - drag.start.x, dy = p.y - drag.start.y;
+    if (drag.resizing){ f.w = clamp(snapValue(drag.w + dx), 1, pageData.w - f.x); f.h = clamp(snapValue(drag.h + dy), 1, pageData.h - f.y); }
+    else { f.x = clamp(snapValue(drag.x + dx), 0, Math.max(0, pageData.w - f.w)); f.y = clamp(snapValue(drag.y + dy), 0, Math.max(0, pageData.h - f.h)); }
+    saveSoon(); renderBlocks(); renderList(); renderInspector(); renderCode();
+  }
+  function renderCode(){
+    const p = current();
+    const html = p.items.map(item => `  <${item.tag} class="${slug(item.label)}">${esc(itemName(item))}</${item.tag}>`).join("\n");
+    let css = `.wireframe {\n  position: relative;\n  width: 100%;\n  min-height: ${p.pages.desktop.h}px;\n}\n.wireframe > * {\n  position: absolute;\n  box-sizing: border-box;\n}\n`;
+    for (const item of p.items){
+      const f = frame(item,"desktop");
+      css += `.${slug(item.label)} { left: ${f.x}px; top: ${f.y}px; width: ${f.w}px; height: ${f.h}px; background: ${item.color}; border-radius: ${item.radius || 0}px;${f.visible === false ? " display: none;" : ""} }\n`;
+    }
+    for (const id of ["tablet","mobile"]){
+      const pageData = p.pages[id];
+      css += `@media (max-width: ${pageData.w}px) {\n  .wireframe { min-height: ${pageData.h}px; }\n`;
+      for (const item of p.items){
+        const f = frame(item,id);
+        css += `  .${slug(item.label)} { left: ${f.x}px; top: ${f.y}px; width: ${f.w}px; height: ${f.h}px;${f.visible === false ? " display: none;" : " display: block;"} }\n`;
+      }
+      css += `}\n`;
+    }
+    $("code").value = `<div class="wireframe">\n${html}\n</div>\n\n<style>\n${css}</style>`;
+  }
+  function fit(){ zoom = 1; calculateScale(); renderBlocks(); show("View fitted"); }
+
+  $("projectSelect").addEventListener("change", e => { currentId = e.target.value; selectedId = current().items[0]?.id || null; zoom = 1; saveSoon(); render(); });
+  $("projectName").addEventListener("input", e => { current().name = e.target.value; saveSoon(); renderPicker(); });
+  $("newProject").addEventListener("click", () => { const p = blank(); state.projects.unshift(p); currentId = p.id; selectedId = p.items[0]?.id || null; zoom = 1; saveSoon(); render(); });
+  $("duplicateProject").addEventListener("click", () => { const copy = structuredClone(current()); copy.id = uid(); copy.name = `${copy.name || "Untitled wireframe"} copy`; copy.items.forEach(i => i.id = uid()); state.projects.unshift(copy); currentId = copy.id; selectedId = copy.items[0]?.id || null; saveSoon(); render(); });
+  $("deleteProject").addEventListener("click", () => { if (state.projects.length === 1) return show("Keep at least one wireframe"); if (!confirm(`Delete "${current().name || "Untitled wireframe"}"?`)) return; state.projects = state.projects.filter(p => p.id !== currentId); currentId = state.projects[0].id; selectedId = current().items[0]?.id || null; saveSoon(); render(); });
+  $("addBlock").addEventListener("click", () => addItem());
+  $("copyBreakpoint").addEventListener("click", copyBreakpoint);
+  $("fitView").addEventListener("click", fit);
+  $("tabs").addEventListener("click", e => { const tab = e.target.closest("[data-bp]"); if (!tab) return; bp = tab.dataset.bp; selectedId = selectedId && current().items.some(i => i.id === selectedId) ? selectedId : current().items[0]?.id || null; zoom = 1; saveSoon(); render(); });
+  $("list").addEventListener("click", e => { const copy = e.target.closest("[data-copy]"); if (copy){ duplicateItem(copy.dataset.copy); return; } const row = e.target.closest("[data-id]"); if (row){ selectedId = row.dataset.id; render(); } });
+  $("pageW").addEventListener("change", e => { current().pages[bp].w = Math.max(1, Number(e.target.value) || 1); clampFrames(); saveSoon(); render(); });
+  $("pageH").addEventListener("change", e => { current().pages[bp].h = Math.max(1, Number(e.target.value) || 1); clampFrames(); saveSoon(); render(); });
+  $("gridSize").addEventListener("change", e => { current().grid = Math.max(1, Number(e.target.value) || 1); saveSoon(); render(); });
+  $("snap").addEventListener("change", e => { current().snap = e.target.value === "on"; saveSoon(); render(); });
+  $("itemLabel").addEventListener("input", e => { const item = selected(); if (!item) return; item.label = e.target.value; saveSoon(); renderBlocks(); renderList(); renderCode(); });
+  $("itemTag").addEventListener("change", e => updateItem({tag:e.target.value}));
+  $("itemX").addEventListener("change", e => updateFrame({x:snapValue(Number(e.target.value) || 0)}));
+  $("itemY").addEventListener("change", e => updateFrame({y:snapValue(Number(e.target.value) || 0)}));
+  $("itemW").addEventListener("change", e => updateFrame({w:snapValue(Number(e.target.value) || 1)}));
+  $("itemH").addEventListener("change", e => updateFrame({h:snapValue(Number(e.target.value) || 1)}));
+  $("itemRadius").addEventListener("change", e => updateItem({radius:Math.max(0, Number(e.target.value) || 0)}));
+  $("itemVisible").addEventListener("change", e => updateFrame({visible:e.target.value === "yes"}));
+  $("duplicateItem").addEventListener("click", () => duplicateItem());
+  $("deleteItem").addEventListener("click", deleteItem);
+  $("palette").addEventListener("click", e => { const btn = e.target.closest("[data-color]"); if (btn) updateItem({color:btn.dataset.color}); });
+  $("copyCode").addEventListener("click", async () => { try{ await navigator.clipboard.writeText($("code").value); show("Code copied"); }catch{ $("code").focus(); $("code").select(); show("Code selected"); } });
+  page.addEventListener("pointerdown", startDrag);
+  page.addEventListener("pointermove", moveDrag);
+  page.addEventListener("pointerup", e => { if (drag && e.pointerId === drag.pointerId) drag = null; });
+  page.addEventListener("pointercancel", e => { if (drag && e.pointerId === drag.pointerId) drag = null; });
+  page.addEventListener("click", e => { if (e.target === page){ selectedId = null; render(); } });
+  viewport.addEventListener("wheel", e => { if (!e.ctrlKey && !e.metaKey) return; e.preventDefault(); zoom = clamp(zoom + (e.deltaY < 0 ? .1 : -.1), .35, 3); calculateScale(); renderBlocks(); }, {passive:false});
+  window.addEventListener("resize", render);
+  document.addEventListener("keydown", e => { if (e.target.matches("input,select,textarea")) return; if (e.key === "Delete" || e.key === "Backspace") deleteItem(); });
+
+  selectedId = current().items[0]?.id || null;
+  render();
+})();
+</script>
+</body>
+</html>
