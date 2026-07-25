@@ -11,6 +11,7 @@ assert.match(html, /touch-action:none/, "the drag handle should support delibera
 assert.match(html, /pointerdown/, "reordering should use pointer events for mouse and touch");
 assert.match(html, /aria-expanded/, "the expandable task section should expose its state");
 assert.match(html, /last 4 weeks/, "completed task history should explain its retention window");
+assert.match(html, /data-action="restore"/, "each completed task should offer a persistent Undo action");
 
 const stubElement = {
   addEventListener() {},
@@ -48,6 +49,7 @@ vm.runInContext(script, sandbox);
 assert.equal(typeof sandbox.moveTask, "function", "moveTask should be available for testing");
 assert.equal(typeof sandbox.pruneCompleted, "function", "pruneCompleted should be available for testing");
 assert.equal(typeof sandbox.groupCompletedTasks, "function", "groupCompletedTasks should be available for testing");
+assert.equal(typeof sandbox.restoreCompletedTask, "function", "restoreCompletedTask should be available for testing");
 
 const tasks = [
   { id:"a", text:"First" },
@@ -94,4 +96,20 @@ assert.deepEqual(
     ["2026-06-29", ["oldest-kept"]],
   ],
   "completed tasks should be grouped by their Monday week"
+);
+
+const restored = sandbox.restoreCompletedTask(
+  [{ id:"a", text:"First" }, { id:"c", text:"Third" }],
+  [{ id:"b", text:"Second", completedAt:"2026-07-21T09:00:00Z", completedFromIndex:1 }],
+  "b"
+);
+assert.deepEqual(
+  restored.tasks.map((task) => task.id),
+  ["a", "b", "c"],
+  "Undo should restore a completed task to its previous open-list position"
+);
+assert.deepEqual(
+  restored.completed.map((task) => task.id),
+  [],
+  "Undo should remove the task from completed history"
 );

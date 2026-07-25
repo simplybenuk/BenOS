@@ -109,7 +109,7 @@
     }
     .done-week span { margin-left:auto; }
     .done-task {
-      display:grid; grid-template-columns:34px minmax(0,1fr);
+      display:grid; grid-template-columns:34px minmax(0,1fr) auto;
       gap:2px 8px; align-items:center; padding:10px 12px;
       border-top:1px solid var(--border);
     }
@@ -124,6 +124,13 @@
       overflow-wrap:anywhere;
     }
     .done-time { color:#727d88; font:10px var(--mono); }
+    .restore {
+      grid-column:3; grid-row:1 / span 2; align-self:center;
+      border:1px solid var(--border); border-radius:9px; padding:6px 8px;
+      background:transparent; color:var(--muted); cursor:pointer;
+      font:11px var(--mono);
+    }
+    .restore:hover, .restore:focus-visible { border-color:#2a8aa0; color:var(--accent); }
     .toast {
       position:fixed; z-index:20; left:50%; bottom:18px; transform:translateX(-50%);
       display:flex; align-items:center; gap:14px; min-width:min(330px,calc(100vw - 28px));
@@ -311,6 +318,7 @@
               <span class="done-check" aria-hidden="true">✓</span>
               <div class="done-text">${escapeHtml(task.text)}</div>
               <time class="done-time" datetime="${escapeHtml(task.completedAt)}">${escapeHtml(formatCompletedAt(task.completedAt))}</time>
+              <button class="restore" type="button" data-action="restore" data-id="${escapeHtml(task.id)}" aria-label="Move ${escapeHtml(task.text)} back to the to-do list">Undo</button>
             </div>
           `).join("")}
         </section>
@@ -351,11 +359,37 @@
       render();
     }
 
+    function restoreCompletedTask(openTasks, doneTasks, id) {
+      const completedIndex = doneTasks.findIndex((task) => task.id === id);
+      if (completedIndex < 0) return { tasks:openTasks, completed:doneTasks };
+      const doneTask = doneTasks[completedIndex];
+      const { completedAt, completedFromIndex, ...restoredTask } = doneTask;
+      const nextTasks = openTasks.slice();
+      const nextCompleted = doneTasks.filter((task) => task.id !== id);
+      const requestedIndex = Number.isInteger(completedFromIndex) ? completedFromIndex : 0;
+      nextTasks.splice(Math.max(0, Math.min(requestedIndex, nextTasks.length)), 0, restoredTask);
+      return { tasks:nextTasks, completed:nextCompleted };
+    }
+
+    function restoreTask(id) {
+      const restored = restoreCompletedTask(tasks, completed, id);
+      if (restored.tasks === tasks) return;
+      tasks = restored.tasks;
+      completed = restored.completed;
+      if (lastCompleted?.completedId === id) {
+        lastCompleted = null;
+        clearTimeout(completeTask.timeout);
+        toast.classList.remove("show");
+      }
+      saveData();
+      render();
+    }
+
     function completeTask(id) {
       const index = tasks.findIndex((task) => task.id === id);
       if (index < 0) return;
       const task = tasks[index];
-      const doneTask = { ...task, completedAt:new Date().toISOString() };
+      const doneTask = { ...task, completedAt:new Date().toISOString(), completedFromIndex:index };
       lastCompleted = { task, index, completedId:doneTask.id };
       tasks.splice(index, 1);
       completed.unshift(doneTask);
@@ -400,15 +434,14 @@
       if (button) completeTask(button.dataset.id);
     });
 
+    $("doneList").addEventListener("click", (event) => {
+      const button = event.target.closest('[data-action="restore"]');
+      if (button) restoreTask(button.dataset.id);
+    });
+
     $("undoBtn").addEventListener("click", () => {
       if (!lastCompleted) return;
-      tasks.splice(Math.min(lastCompleted.index, tasks.length), 0, lastCompleted.task);
-      completed = completed.filter((task) => task.id !== lastCompleted.completedId);
-      lastCompleted = null;
-      clearTimeout(completeTask.timeout);
-      toast.classList.remove("show");
-      saveData();
-      render();
+      restoreTask(lastCompleted.completedId);
     });
 
     list.addEventListener("keydown", (event) => {
@@ -453,6 +486,7 @@
     globalThis.pruneCompleted = pruneCompleted;
     globalThis.groupCompletedTasks = groupCompletedTasks;
     globalThis.retentionCutoff = retentionCutoff;
+    globalThis.restoreCompletedTask = restoreCompletedTask;
     saveData();
     render();
   </script>
