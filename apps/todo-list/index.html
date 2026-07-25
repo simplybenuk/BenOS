@@ -96,6 +96,34 @@
     }
     .more:hover { border-color:#38506e; color:var(--text); }
     .tip { margin:12px 2px 0; color:#727d88; font:11px/1.5 var(--mono); }
+    .done-section[hidden] { display:none; }
+    .done-groups { display:grid; gap:12px; }
+    .done-group {
+      overflow:hidden; border:1px solid var(--border); border-radius:14px;
+      background:rgba(17,21,27,.62);
+    }
+    .done-week {
+      display:flex; align-items:center; gap:8px; padding:9px 12px;
+      border-bottom:1px solid var(--border); color:var(--muted);
+      font:11px var(--mono);
+    }
+    .done-week span { margin-left:auto; }
+    .done-task {
+      display:grid; grid-template-columns:34px minmax(0,1fr);
+      gap:2px 8px; align-items:center; padding:10px 12px;
+      border-top:1px solid var(--border);
+    }
+    .done-task:first-of-type { border-top:0; }
+    .done-check {
+      grid-row:1 / span 2; width:18px; height:18px; display:grid; place-items:center;
+      border:1px solid #315d3c; border-radius:6px; color:var(--ok);
+      font:12px var(--mono);
+    }
+    .done-text {
+      min-width:0; color:#bdc7d1; font-size:13px; line-height:1.35;
+      overflow-wrap:anywhere;
+    }
+    .done-time { color:#727d88; font:10px var(--mono); }
     .toast {
       position:fixed; z-index:20; left:50%; bottom:18px; transform:translateX(-50%);
       display:flex; align-items:center; gap:14px; min-width:min(330px,calc(100vw - 28px));
@@ -143,6 +171,14 @@
       <section class="list" id="list" aria-label="To-do list" aria-live="polite"></section>
       <button class="more" id="moreBtn" type="button" aria-controls="list" hidden></button>
       <p class="tip">Drag the grip to reorder. With the grip focused, use ↑ and ↓.</p>
+
+      <section class="done-section" id="doneSection" aria-label="Completed tasks" hidden>
+        <div class="section-head">
+          <b>Done</b>
+          <span id="doneSummary"></span>
+        </div>
+        <div class="done-groups" id="doneList"></div>
+      </section>
     </div>
   </main>
 
@@ -167,21 +203,79 @@
       return Math.random().toString(16).slice(2) + Date.now().toString(16);
     }
 
-    function loadTasks() {
+    function startOfWeek(value) {
+      const date = new Date(value);
+      date.setHours(0, 0, 0, 0);
+      const day = date.getDay() || 7;
+      date.setDate(date.getDate() - day + 1);
+      return date;
+    }
+
+    function weekKey(value) {
+      const date = startOfWeek(value);
+      const pad = (number) => String(number).padStart(2, "0");
+      return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+    }
+
+    function retentionCutoff(now = new Date()) {
+      const cutoff = startOfWeek(now);
+      cutoff.setDate(cutoff.getDate() - 21);
+      return cutoff;
+    }
+
+    function pruneCompleted(items, now = new Date()) {
+      const cutoff = retentionCutoff(now).getTime();
+      return items
+        .filter((task) => task && typeof task.id === "string" && typeof task.text === "string"
+          && Number.isFinite(new Date(task.completedAt).getTime())
+          && new Date(task.completedAt).getTime() >= cutoff)
+        .sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt));
+    }
+
+    function groupCompletedTasks(items, now = new Date()) {
+      const thisWeek = startOfWeek(now);
+      const lastWeek = new Date(thisWeek);
+      lastWeek.setDate(lastWeek.getDate() - 7);
+      const groups = [];
+      for (const task of pruneCompleted(items, now)) {
+        const key = weekKey(task.completedAt);
+        let group = groups.find((item) => item.key === key);
+        if (!group) {
+          const weekStart = startOfWeek(task.completedAt);
+          const label = weekStart.getTime() === thisWeek.getTime()
+            ? "This week"
+            : weekStart.getTime() === lastWeek.getTime()
+              ? "Last week"
+              : `Week of ${weekStart.toLocaleDateString(undefined, { day:"numeric", month:"short" })}`;
+          group = { key, label, tasks:[] };
+          groups.push(group);
+        }
+        group.tasks.push(task);
+      }
+      return groups;
+    }
+
+    function loadData() {
       try {
-        const parsed = JSON.parse(localStorage.getItem(KEY) || "[]");
-        return Array.isArray(parsed)
-          ? parsed.filter((task) => task && typeof task.id === "string" && typeof task.text === "string")
+        const parsed = JSON.parse(localStorage.getItem(KEY) || "{}");
+        const data = Array.isArray(parsed) ? { tasks:parsed, completed:[] } : parsed;
+        const tasks = Array.isArray(data.tasks)
+          ? data.tasks.filter((task) => task && typeof task.id === "string" && typeof task.text === "string")
           : [];
+        const completed = Array.isArray(data.completed) ? pruneCompleted(data.completed) : [];
+        return { tasks, completed };
       } catch {
-        return [];
+        return { tasks:[], completed:[] };
       }
     }
 
-    let tasks = loadTasks();
+    const storedData = loadData();
+    let tasks = storedData.tasks;
+    let completed = storedData.completed;
 
-    function saveTasks() {
-      localStorage.setItem(KEY, JSON.stringify(tasks));
+    function saveData() {
+      completed = pruneCompleted(completed);
+      localStorage.setItem(KEY, JSON.stringify({ tasks, completed }));
     }
 
     function escapeHtml(value) {
@@ -197,6 +291,30 @@
       const [task] = copy.splice(currentIndex, 1);
       copy.splice(Math.max(0, Math.min(nextIndex, copy.length)), 0, task);
       return copy;
+    }
+
+    function formatCompletedAt(value) {
+      return new Date(value).toLocaleString(undefined, {
+        weekday:"short", day:"numeric", month:"short", hour:"2-digit", minute:"2-digit"
+      });
+    }
+
+    function renderDone() {
+      const doneSection = $("doneSection");
+      doneSection.hidden = completed.length === 0;
+      $("doneSummary").textContent = `${completed.length} in the last 4 weeks`;
+      $("doneList").innerHTML = groupCompletedTasks(completed).map((group) => `
+        <section class="done-group">
+          <div class="done-week"><b>${escapeHtml(group.label)}</b><span>${group.tasks.length}</span></div>
+          ${group.tasks.map((task) => `
+            <div class="done-task">
+              <span class="done-check" aria-hidden="true">✓</span>
+              <div class="done-text">${escapeHtml(task.text)}</div>
+              <time class="done-time" datetime="${escapeHtml(task.completedAt)}">${escapeHtml(formatCompletedAt(task.completedAt))}</time>
+            </div>
+          `).join("")}
+        </section>
+      `).join("");
     }
 
     function render() {
@@ -222,22 +340,26 @@
       moreBtn.hidden = hiddenCount === 0;
       moreBtn.textContent = expanded ? "Show only the top 3" : `Show ${hiddenCount} more`;
       moreBtn.setAttribute("aria-expanded", String(expanded));
+      renderDone();
     }
 
     function addTask(text) {
       const clean = text.trim();
       if (!clean) return;
       tasks.push({ id:uid(), text:clean, createdAt:new Date().toISOString() });
-      saveTasks();
+      saveData();
       render();
     }
 
     function completeTask(id) {
       const index = tasks.findIndex((task) => task.id === id);
       if (index < 0) return;
-      lastCompleted = { task:tasks[index], index };
+      const task = tasks[index];
+      const doneTask = { ...task, completedAt:new Date().toISOString() };
+      lastCompleted = { task, index, completedId:doneTask.id };
       tasks.splice(index, 1);
-      saveTasks();
+      completed.unshift(doneTask);
+      saveData();
       render();
       toast.classList.add("show");
       clearTimeout(completeTask.timeout);
@@ -254,7 +376,7 @@
       const orderedVisibleTasks = orderedVisibleIds.map((id) => tasks.find((task) => task.id === id));
       const hiddenTasks = tasks.filter((task) => !visibleSet.has(task.id));
       tasks = orderedVisibleTasks.concat(hiddenTasks);
-      saveTasks();
+      saveData();
       const draggedId = drag.id;
       drag = null;
       render();
@@ -281,10 +403,11 @@
     $("undoBtn").addEventListener("click", () => {
       if (!lastCompleted) return;
       tasks.splice(Math.min(lastCompleted.index, tasks.length), 0, lastCompleted.task);
+      completed = completed.filter((task) => task.id !== lastCompleted.completedId);
       lastCompleted = null;
       clearTimeout(completeTask.timeout);
       toast.classList.remove("show");
-      saveTasks();
+      saveData();
       render();
     });
 
@@ -297,7 +420,7 @@
       if (nextIndex < 0 || nextIndex >= tasks.length) return;
       if (!expanded && nextIndex >= TOP_COUNT) return;
       tasks = moveTask(tasks, handle.dataset.id, nextIndex);
-      saveTasks();
+      saveData();
       render();
       list.querySelector(`.handle[data-id="${CSS.escape(handle.dataset.id)}"]`)?.focus();
     });
@@ -327,6 +450,10 @@
     list.addEventListener("pointercancel", finishDrag);
 
     globalThis.moveTask = moveTask;
+    globalThis.pruneCompleted = pruneCompleted;
+    globalThis.groupCompletedTasks = groupCompletedTasks;
+    globalThis.retentionCutoff = retentionCutoff;
+    saveData();
     render();
   </script>
   <span id="reorder-help" hidden>Use the up and down arrow keys to reorder this task.</span>
