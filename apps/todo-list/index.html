@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>BenOS • To-do List</title>
+  <style>
+    :root {
+      --bg:#0b0d10; --panel:#11151b; --panel2:#0f1318;
+      --text:#e6edf3; --muted:#9aa4af; --border:#243041;
+      --accent:#6ee7ff; --ok:#7ee787;
+      --mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
+      --sans:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji";
+    }
+    * { box-sizing: border-box; }
+    body { margin:0; background:var(--bg); color:var(--text); font-family:var(--sans); }
+    button, input { font:inherit; }
+    header {
+      position:sticky; top:0; z-index:10;
+      background:linear-gradient(to bottom,rgba(11,13,16,.96),rgba(11,13,16,.78));
+      backdrop-filter:blur(6px); border-bottom:1px solid var(--border);
+    }
+    .wrap { max-width:680px; margin:0 auto; padding:14px; }
+    .toprow { display:flex; gap:10px; align-items:center; }
+    .brand {
+      display:flex; align-items:baseline; gap:10px; color:inherit;
+      font-family:var(--mono); text-decoration:none;
+    }
+    .brand b { color:var(--accent); }
+    .brand span { color:var(--muted); font-size:12px; }
+    .count { margin-left:auto; color:var(--muted); font:12px var(--mono); }
+    main .wrap { padding-top:18px; padding-bottom:72px; }
+    .composer {
+      display:flex; gap:8px; padding:8px;
+      border:1px solid var(--border); border-radius:14px; background:var(--panel2);
+    }
+    .composer:focus-within { border-color:#2a8aa0; }
+    .composer input {
+      min-width:0; flex:1; border:0; outline:0; padding:8px;
+      background:transparent; color:var(--text); font-size:16px;
+    }
+    .composer input::placeholder { color:#6f7b87; }
+    .btn {
+      border:1px solid var(--border); border-radius:10px; padding:8px 11px;
+      background:var(--panel); color:var(--text); cursor:pointer;
+      font:12px var(--mono);
+    }
+    .btn:hover { border-color:#38506e; }
+    .btn:active { transform:translateY(1px); }
+    .btn.primary { border-color:#2a8aa0; color:var(--accent); }
+    .section-head {
+      display:flex; align-items:center; gap:10px; margin:22px 2px 9px;
+      color:var(--muted); font:12px var(--mono);
+    }
+    .section-head b { color:var(--text); font-size:13px; }
+    .section-head span { margin-left:auto; }
+    .list {
+      overflow:hidden; border:1px solid var(--border); border-radius:14px;
+      background:var(--panel);
+    }
+    .task {
+      display:grid; grid-template-columns:42px minmax(0,1fr) 46px;
+      align-items:stretch; min-height:58px; border-top:1px solid var(--border);
+      background:var(--panel); transition:opacity .14s ease,background .14s ease;
+    }
+    .task:first-child { border-top:0; }
+    .task.dragging {
+      position:relative; z-index:2; opacity:.72;
+      background:#17202a; box-shadow:0 8px 22px rgba(0,0,0,.35);
+    }
+    .complete {
+      width:22px; height:22px; align-self:center; justify-self:center;
+      border:1px solid #506070; border-radius:7px; background:rgba(0,0,0,.18);
+      color:var(--ok); cursor:pointer;
+    }
+    .complete:hover { border-color:var(--ok); }
+    .task-text {
+      align-self:center; min-width:0; padding:12px 8px 12px 2px;
+      font-size:15px; line-height:1.4; overflow-wrap:anywhere;
+    }
+    .handle {
+      border:0; border-left:1px solid var(--border); background:rgba(0,0,0,.08);
+      color:var(--muted); cursor:grab; touch-action:none; user-select:none;
+      font:18px/1 var(--mono); letter-spacing:-3px;
+    }
+    .handle:hover, .handle:focus-visible { color:var(--accent); background:rgba(110,231,255,.05); }
+    .handle:active { cursor:grabbing; }
+    .empty {
+      padding:28px 18px; text-align:center; color:var(--muted);
+      font:13px/1.5 var(--mono);
+    }
+    .more {
+      width:100%; margin-top:9px; padding:11px;
+      border:1px solid var(--border); border-radius:12px; background:transparent;
+      color:var(--muted); cursor:pointer; font:12px var(--mono);
+    }
+    .more:hover { border-color:#38506e; color:var(--text); }
+    .tip { margin:12px 2px 0; color:#727d88; font:11px/1.5 var(--mono); }
+    .toast {
+      position:fixed; z-index:20; left:50%; bottom:18px; transform:translateX(-50%);
+      display:flex; align-items:center; gap:14px; min-width:min(330px,calc(100vw - 28px));
+      padding:10px 12px; border:1px solid var(--border); border-radius:12px;
+      background:rgba(17,21,27,.96); box-shadow:0 8px 30px rgba(0,0,0,.35);
+      opacity:0; pointer-events:none; transition:opacity .15s ease;
+      color:var(--text); font:12px var(--mono);
+    }
+    .toast.show { opacity:1; pointer-events:auto; }
+    .toast button {
+      margin-left:auto; border:0; background:transparent; color:var(--accent);
+      cursor:pointer; font:12px var(--mono);
+    }
+    @media (max-width:520px) {
+      .wrap { padding-left:12px; padding-right:12px; }
+      .task { grid-template-columns:42px minmax(0,1fr) 52px; min-height:62px; }
+      .handle { font-size:20px; }
+    }
+    @media (prefers-reduced-motion:reduce) {
+      .task, .toast { transition:none; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap toprow">
+      <a class="brand" href="../../index.html" aria-label="Back to BenOS dashboard">
+        <b>BenOS</b><span>to-do list</span>
+      </a>
+      <span class="count" id="count"></span>
+    </div>
+  </header>
+
+  <main>
+    <div class="wrap">
+      <form class="composer" id="composer">
+        <input id="newTask" maxlength="240" autocomplete="off" aria-label="New task" placeholder="What needs doing?" />
+        <button class="btn primary" type="submit">Add</button>
+      </form>
+
+      <div class="section-head">
+        <b>Up next</b>
+        <span id="visibleSummary"></span>
+      </div>
+      <section class="list" id="list" aria-label="To-do list" aria-live="polite"></section>
+      <button class="more" id="moreBtn" type="button" aria-controls="list" hidden></button>
+      <p class="tip">Drag the grip to reorder. With the grip focused, use ↑ and ↓.</p>
+    </div>
+  </main>
+
+  <div class="toast" id="toast" role="status">
+    <span>Task completed</span>
+    <button id="undoBtn" type="button">Undo</button>
+  </div>
+
+  <script>
+    const KEY = "benos:todo-list:v1";
+    const TOP_COUNT = 3;
+    const $ = (id) => document.getElementById(id);
+    const list = $("list");
+    const moreBtn = $("moreBtn");
+    const newTask = $("newTask");
+    const toast = $("toast");
+    let expanded = false;
+    let drag = null;
+    let lastCompleted = null;
+
+    function uid() {
+      return Math.random().toString(16).slice(2) + Date.now().toString(16);
+    }
+
+    function loadTasks() {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(KEY) || "[]");
+        return Array.isArray(parsed)
+          ? parsed.filter((task) => task && typeof task.id === "string" && typeof task.text === "string")
+          : [];
+      } catch {
+        return [];
+      }
+    }
+
+    let tasks = loadTasks();
+
+    function saveTasks() {
+      localStorage.setItem(KEY, JSON.stringify(tasks));
+    }
+
+    function escapeHtml(value) {
+      return String(value).replace(/[<>&"]/g, (character) => ({
+        "<":"&lt;", ">":"&gt;", "&":"&amp;", '"':"&quot;"
+      }[character]));
+    }
+
+    function moveTask(items, id, nextIndex) {
+      const currentIndex = items.findIndex((task) => task.id === id);
+      if (currentIndex < 0) return items;
+      const copy = items.slice();
+      const [task] = copy.splice(currentIndex, 1);
+      copy.splice(Math.max(0, Math.min(nextIndex, copy.length)), 0, task);
+      return copy;
+    }
+
+    function render() {
+      const shown = expanded ? tasks : tasks.slice(0, TOP_COUNT);
+      $("count").textContent = `${tasks.length} open`;
+      $("visibleSummary").textContent = tasks.length > TOP_COUNT && !expanded
+        ? `showing ${TOP_COUNT} of ${tasks.length}`
+        : `${tasks.length} task${tasks.length === 1 ? "" : "s"}`;
+
+      if (!shown.length) {
+        list.innerHTML = '<div class="empty">Nothing on the list.<br>Add one small thing above.</div>';
+      } else {
+        list.innerHTML = shown.map((task, index) => `
+          <article class="task" data-id="${escapeHtml(task.id)}">
+            <button class="complete" type="button" data-action="complete" data-id="${escapeHtml(task.id)}" aria-label="Complete ${escapeHtml(task.text)}"></button>
+            <div class="task-text">${escapeHtml(task.text)}</div>
+            <button class="handle" type="button" data-id="${escapeHtml(task.id)}" aria-label="Reorder ${escapeHtml(task.text)}" aria-describedby="reorder-help" title="Drag to reorder; arrow keys also work">•••</button>
+          </article>
+        `).join("");
+      }
+
+      const hiddenCount = Math.max(0, tasks.length - TOP_COUNT);
+      moreBtn.hidden = hiddenCount === 0;
+      moreBtn.textContent = expanded ? "Show only the top 3" : `Show ${hiddenCount} more`;
+      moreBtn.setAttribute("aria-expanded", String(expanded));
+    }
+
+    function addTask(text) {
+      const clean = text.trim();
+      if (!clean) return;
+      tasks.push({ id:uid(), text:clean, createdAt:new Date().toISOString() });
+      saveTasks();
+      render();
+    }
+
+    function completeTask(id) {
+      const index = tasks.findIndex((task) => task.id === id);
+      if (index < 0) return;
+      lastCompleted = { task:tasks[index], index };
+      tasks.splice(index, 1);
+      saveTasks();
+      render();
+      toast.classList.add("show");
+      clearTimeout(completeTask.timeout);
+      completeTask.timeout = setTimeout(() => {
+        toast.classList.remove("show");
+        lastCompleted = null;
+      }, 5000);
+    }
+
+    function finishDrag() {
+      if (!drag) return;
+      const orderedVisibleIds = [...list.querySelectorAll(".task")].map((row) => row.dataset.id);
+      const visibleSet = new Set(orderedVisibleIds);
+      const orderedVisibleTasks = orderedVisibleIds.map((id) => tasks.find((task) => task.id === id));
+      const hiddenTasks = tasks.filter((task) => !visibleSet.has(task.id));
+      tasks = orderedVisibleTasks.concat(hiddenTasks);
+      saveTasks();
+      const draggedId = drag.id;
+      drag = null;
+      render();
+      list.querySelector(`.handle[data-id="${CSS.escape(draggedId)}"]`)?.focus();
+    }
+
+    $("composer").addEventListener("submit", (event) => {
+      event.preventDefault();
+      addTask(newTask.value);
+      newTask.value = "";
+      newTask.focus();
+    });
+
+    moreBtn.addEventListener("click", () => {
+      expanded = !expanded;
+      render();
+    });
+
+    list.addEventListener("click", (event) => {
+      const button = event.target.closest('[data-action="complete"]');
+      if (button) completeTask(button.dataset.id);
+    });
+
+    $("undoBtn").addEventListener("click", () => {
+      if (!lastCompleted) return;
+      tasks.splice(Math.min(lastCompleted.index, tasks.length), 0, lastCompleted.task);
+      lastCompleted = null;
+      clearTimeout(completeTask.timeout);
+      toast.classList.remove("show");
+      saveTasks();
+      render();
+    });
+
+    list.addEventListener("keydown", (event) => {
+      const handle = event.target.closest(".handle");
+      if (!handle || !["ArrowUp", "ArrowDown"].includes(event.key)) return;
+      event.preventDefault();
+      const index = tasks.findIndex((task) => task.id === handle.dataset.id);
+      const nextIndex = event.key === "ArrowUp" ? index - 1 : index + 1;
+      if (nextIndex < 0 || nextIndex >= tasks.length) return;
+      if (!expanded && nextIndex >= TOP_COUNT) return;
+      tasks = moveTask(tasks, handle.dataset.id, nextIndex);
+      saveTasks();
+      render();
+      list.querySelector(`.handle[data-id="${CSS.escape(handle.dataset.id)}"]`)?.focus();
+    });
+
+    list.addEventListener("pointerdown", (event) => {
+      const handle = event.target.closest(".handle");
+      if (!handle || (event.pointerType === "mouse" && event.button !== 0)) return;
+      event.preventDefault();
+      drag = { id:handle.dataset.id, pointerId:event.pointerId };
+      handle.setPointerCapture(event.pointerId);
+      handle.closest(".task").classList.add("dragging");
+    });
+
+    list.addEventListener("pointermove", (event) => {
+      if (!drag || event.pointerId !== drag.pointerId) return;
+      event.preventDefault();
+      const draggedRow = list.querySelector(`.task[data-id="${CSS.escape(drag.id)}"]`);
+      const targetRow = document.elementFromPoint(event.clientX, event.clientY)?.closest(".task");
+      if (!draggedRow || !targetRow || targetRow === draggedRow || targetRow.parentElement !== list) return;
+      const targetBox = targetRow.getBoundingClientRect();
+      list.insertBefore(draggedRow, event.clientY < targetBox.top + targetBox.height / 2 ? targetRow : targetRow.nextSibling);
+    });
+
+    list.addEventListener("pointerup", (event) => {
+      if (drag && event.pointerId === drag.pointerId) finishDrag();
+    });
+    list.addEventListener("pointercancel", finishDrag);
+
+    globalThis.moveTask = moveTask;
+    render();
+  </script>
+  <span id="reorder-help" hidden>Use the up and down arrow keys to reorder this task.</span>
+</body>
+</html>

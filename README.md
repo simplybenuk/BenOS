@@ -11,6 +11,7 @@ No accounts. No sync. No cloud.
 ## Current apps
 
 - **Scratchpad** — timestamped local notes with search
+- **To-do List** — a priority-ordered list with the top three kept in view
 - **ISO Week Viewer** — list ISO week numbers and the Monday date for each week in a selected year
 - **Layout Builder** — arrange labelled measured rectangles on a fixed canvas for sheet cuts, rooms, and simple spatial plans
 - **Wireframe Builder** — sketch responsive page layouts with div-like blocks across desktop, tablet, and mobile breakpoints
@@ -74,6 +75,8 @@ BenOS/
     ├── journey-board/
     │   └── index.html
     ├── temp-notes/
+    │   └── index.html
+    ├── todo-list/
     │   └── index.html
     ├── screenshot-drop/
     │   └── index.html
