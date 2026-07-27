@@ -10,10 +10,12 @@ No accounts. No sync. No cloud.
 
 ## Current apps
 
+- **Scratchpad** — timestamped local notes with search
+- **To-do List** — a priority-ordered list with the top three kept in view and four weeks of done history
+- **ISO Week Viewer** — list ISO week numbers and the Monday date for each week in a selected year
 - **Layout Builder** — arrange labelled measured rectangles on a fixed canvas for sheet cuts, rooms, and simple spatial plans
 - **Wireframe Builder** — sketch responsive page layouts with div-like blocks across desktop, tablet, and mobile breakpoints
 - **Journey Board** — arrange journey screenshots, add text and connectors, save reusable journeys, and export high-resolution PNGs for review
-- **Scratchpad** — timestamped local notes with search
 - **Screenshot Drop** — paste or drag screenshots into a simple local visual feed
 
 Retired experiments are left in `apps/` for reference, but are not shown in the launcher:
@@ -66,11 +68,15 @@ BenOS/
 └── apps/
     ├── layout-builder/
     │   └── index.html
+    ├── iso-week-viewer/
+    │   └── index.html
     ├── wireframe-builder/
     │   └── index.html
     ├── journey-board/
     │   └── index.html
     ├── temp-notes/
+    │   └── index.html
+    ├── todo-list/
     │   └── index.html
     ├── screenshot-drop/
     │   └── index.html
