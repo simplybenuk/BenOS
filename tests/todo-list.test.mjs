@@ -12,6 +12,8 @@ assert.match(html, /pointerdown/, "reordering should use pointer events for mous
 assert.match(html, /aria-expanded/, "the expandable task section should expose its state");
 assert.match(html, /last 4 weeks/, "completed task history should explain its retention window");
 assert.match(html, /data-action="restore"/, "each completed task should offer a persistent Undo action");
+assert.match(html, /data-action="edit"/, "each open action should offer an Edit control");
+assert.match(html, /class="edit-form"/, "open actions should support inline editing");
 
 const stubElement = {
   addEventListener() {},
@@ -50,6 +52,7 @@ assert.equal(typeof sandbox.moveTask, "function", "moveTask should be available 
 assert.equal(typeof sandbox.pruneCompleted, "function", "pruneCompleted should be available for testing");
 assert.equal(typeof sandbox.groupCompletedTasks, "function", "groupCompletedTasks should be available for testing");
 assert.equal(typeof sandbox.restoreCompletedTask, "function", "restoreCompletedTask should be available for testing");
+assert.equal(typeof sandbox.updateTaskText, "function", "updateTaskText should be available for testing");
 
 const tasks = [
   { id:"a", text:"First" },
@@ -71,6 +74,15 @@ assert.deepEqual(
   sandbox.moveTask(tasks, "missing", 1).map((task) => task.id),
   ["a", "b", "c", "d"],
   "an unknown task should leave the list alone"
+);
+
+const editedTasks = sandbox.updateTaskText(tasks, "b", "  Updated action  ");
+assert.equal(editedTasks[1].text, "Updated action", "editing should trim and save the new action text");
+assert.equal(tasks[1].text, "Second", "editing should not mutate the existing task collection");
+assert.equal(
+  sandbox.updateTaskText(tasks, "b", "   "),
+  tasks,
+  "an open action cannot be changed to empty text"
 );
 
 const now = new Date("2026-07-22T12:00:00Z");
