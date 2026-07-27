@@ -59,7 +59,7 @@
       background:var(--panel);
     }
     .task {
-      display:grid; grid-template-columns:42px minmax(0,1fr) 46px;
+      display:grid; grid-template-columns:42px minmax(0,1fr) auto 46px;
       align-items:stretch; min-height:58px; border-top:1px solid var(--border);
       background:var(--panel); transition:opacity .14s ease,background .14s ease;
     }
@@ -78,6 +78,22 @@
       align-self:center; min-width:0; padding:12px 8px 12px 2px;
       font-size:15px; line-height:1.4; overflow-wrap:anywhere;
     }
+    .edit {
+      align-self:center; margin:0 4px; border:1px solid transparent;
+      border-radius:9px; padding:6px 8px; background:transparent;
+      color:var(--muted); cursor:pointer; font:11px var(--mono);
+    }
+    .edit:hover, .edit:focus-visible { border-color:#2a8aa0; color:var(--accent); }
+    .edit-form {
+      grid-column:2 / 4; align-self:center; display:flex; gap:6px;
+      min-width:0; padding:8px 4px 8px 2px;
+    }
+    .edit-form input {
+      min-width:0; flex:1; border:1px solid #2a8aa0; border-radius:9px;
+      outline:0; padding:7px 8px; background:var(--panel2); color:var(--text);
+    }
+    .edit-form input:focus { box-shadow:0 0 0 2px rgba(110,231,255,.1); }
+    .edit-form .btn { padding:7px 8px; }
     .handle {
       border:0; border-left:1px solid var(--border); background:rgba(0,0,0,.08);
       color:var(--muted); cursor:grab; touch-action:none; user-select:none;
@@ -85,6 +101,7 @@
     }
     .handle:hover, .handle:focus-visible { color:var(--accent); background:rgba(110,231,255,.05); }
     .handle:active { cursor:grabbing; }
+    .handle:disabled { cursor:default; opacity:.35; }
     .empty {
       padding:28px 18px; text-align:center; color:var(--muted);
       font:13px/1.5 var(--mono);
@@ -146,8 +163,10 @@
     }
     @media (max-width:520px) {
       .wrap { padding-left:12px; padding-right:12px; }
-      .task { grid-template-columns:42px minmax(0,1fr) 52px; min-height:62px; }
+      .task { grid-template-columns:42px minmax(0,1fr) auto 52px; min-height:62px; }
       .handle { font-size:20px; }
+      .edit-form { flex-wrap:wrap; }
+      .edit-form input { flex-basis:100%; }
     }
     @media (prefers-reduced-motion:reduce) {
       .task, .toast { transition:none; }
@@ -177,7 +196,7 @@
       </div>
       <section class="list" id="list" aria-label="To-do list" aria-live="polite"></section>
       <button class="more" id="moreBtn" type="button" aria-controls="list" hidden></button>
-      <p class="tip">Drag the grip to reorder. With the grip focused, use ↑ and ↓.</p>
+      <p class="tip">Edit an open action, or drag the grip to reorder. With the grip focused, use ↑ and ↓.</p>
 
       <section class="done-section" id="doneSection" aria-label="Completed tasks" hidden>
         <div class="section-head">
@@ -205,6 +224,7 @@
     let expanded = false;
     let drag = null;
     let lastCompleted = null;
+    let editingId = null;
 
     function uid() {
       return Math.random().toString(16).slice(2) + Date.now().toString(16);
@@ -300,6 +320,12 @@
       return copy;
     }
 
+    function updateTaskText(items, id, text) {
+      const clean = text.trim();
+      if (!clean || !items.some((task) => task.id === id)) return items;
+      return items.map((task) => task.id === id ? { ...task, text:clean } : task);
+    }
+
     function formatCompletedAt(value) {
       return new Date(value).toLocaleString(undefined, {
         weekday:"short", day:"numeric", month:"short", hour:"2-digit", minute:"2-digit"
@@ -338,8 +364,17 @@
         list.innerHTML = shown.map((task, index) => `
           <article class="task" data-id="${escapeHtml(task.id)}">
             <button class="complete" type="button" data-action="complete" data-id="${escapeHtml(task.id)}" aria-label="Complete ${escapeHtml(task.text)}"></button>
-            <div class="task-text">${escapeHtml(task.text)}</div>
-            <button class="handle" type="button" data-id="${escapeHtml(task.id)}" aria-label="Reorder ${escapeHtml(task.text)}" aria-describedby="reorder-help" title="Drag to reorder; arrow keys also work">•••</button>
+            ${editingId === task.id ? `
+              <form class="edit-form" data-id="${escapeHtml(task.id)}">
+                <input name="text" value="${escapeHtml(task.text)}" maxlength="240" required autocomplete="off" aria-label="Edit action" />
+                <button class="btn primary" type="submit">Save</button>
+                <button class="btn" type="button" data-action="cancel-edit">Cancel</button>
+              </form>
+            ` : `
+              <div class="task-text">${escapeHtml(task.text)}</div>
+              <button class="edit" type="button" data-action="edit" data-id="${escapeHtml(task.id)}" aria-label="Edit ${escapeHtml(task.text)}">Edit</button>
+            `}
+            <button class="handle" type="button" data-id="${escapeHtml(task.id)}" aria-label="Reorder ${escapeHtml(task.text)}" aria-describedby="reorder-help" title="Drag to reorder; arrow keys also work" ${editingId === task.id ? "disabled" : ""}>•••</button>
           </article>
         `).join("");
       }
@@ -357,6 +392,33 @@
       tasks.push({ id:uid(), text:clean, createdAt:new Date().toISOString() });
       saveData();
       render();
+    }
+
+    function beginEdit(id) {
+      if (!tasks.some((task) => task.id === id)) return;
+      editingId = id;
+      render();
+      const input = list.querySelector(`.edit-form[data-id="${CSS.escape(id)}"] input`);
+      input?.focus();
+      input?.select();
+    }
+
+    function cancelEdit() {
+      const id = editingId;
+      editingId = null;
+      render();
+      if (id) list.querySelector(`[data-action="edit"][data-id="${CSS.escape(id)}"]`)?.focus();
+    }
+
+    function saveEdit(id, text) {
+      const updated = updateTaskText(tasks, id, text);
+      if (updated === tasks) return false;
+      tasks = updated;
+      editingId = null;
+      saveData();
+      render();
+      list.querySelector(`[data-action="edit"][data-id="${CSS.escape(id)}"]`)?.focus();
+      return true;
     }
 
     function restoreCompletedTask(openTasks, doneTasks, id) {
@@ -388,6 +450,7 @@
     function completeTask(id) {
       const index = tasks.findIndex((task) => task.id === id);
       if (index < 0) return;
+      if (editingId === id) editingId = null;
       const task = tasks[index];
       const doneTask = { ...task, completedAt:new Date().toISOString(), completedFromIndex:index };
       lastCompleted = { task, index, completedId:doneTask.id };
@@ -430,8 +493,18 @@
     });
 
     list.addEventListener("click", (event) => {
-      const button = event.target.closest('[data-action="complete"]');
-      if (button) completeTask(button.dataset.id);
+      const button = event.target.closest("[data-action]");
+      if (!button) return;
+      if (button.dataset.action === "complete") completeTask(button.dataset.id);
+      if (button.dataset.action === "edit") beginEdit(button.dataset.id);
+      if (button.dataset.action === "cancel-edit") cancelEdit();
+    });
+
+    list.addEventListener("submit", (event) => {
+      const form = event.target.closest(".edit-form");
+      if (!form) return;
+      event.preventDefault();
+      saveEdit(form.dataset.id, new FormData(form).get("text") || "");
     });
 
     $("doneList").addEventListener("click", (event) => {
@@ -445,6 +518,11 @@
     });
 
     list.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && event.target.closest(".edit-form")) {
+        event.preventDefault();
+        cancelEdit();
+        return;
+      }
       const handle = event.target.closest(".handle");
       if (!handle || !["ArrowUp", "ArrowDown"].includes(event.key)) return;
       event.preventDefault();
@@ -483,6 +561,7 @@
     list.addEventListener("pointercancel", finishDrag);
 
     globalThis.moveTask = moveTask;
+    globalThis.updateTaskText = updateTaskText;
     globalThis.pruneCompleted = pruneCompleted;
     globalThis.groupCompletedTasks = groupCompletedTasks;
     globalThis.retentionCutoff = retentionCutoff;
