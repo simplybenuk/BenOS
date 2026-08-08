@@ -17,6 +17,7 @@ No accounts. No sync. No cloud.
 - **Wireframe Builder** — sketch responsive page layouts with div-like blocks across desktop, tablet, and mobile breakpoints
 - **Journey Board** — arrange journey screenshots, add text and connectors, save reusable journeys, and export high-resolution PNGs for review
 - **Screenshot Drop** — paste or drag screenshots into a simple local visual feed
+- **Backup** — export all local BenOS data to one JSON file and restore it here or on another device
 
 Retired experiments are left in `apps/` for reference, but are not shown in the launcher:
 
@@ -80,6 +81,8 @@ BenOS/
     │   └── index.html
     ├── screenshot-drop/
     │   └── index.html
+    ├── backup/
+    │   └── index.html
     ├── okr-tracker/           # retired experiment
     │   └── index.html
     └── voice-transform/       # retired experiment
@@ -104,6 +107,17 @@ Use it for reviewing journeys and workflows where the detail inside screenshots 
 - Journeys autosave locally in IndexedDB
 
 ---
+
+## Backup
+
+Local-first still means data can be lost with a browser profile. Backup is the escape hatch.
+
+- Scans every `benos` `localStorage` key and `benos_*` IndexedDB database in the current browser
+- Downloads the lot as a single `benos-backup-YYYY-MM-DD.json` (screenshots included, base64 encoded)
+- Restores a backup file with **Merge** (overwrite only what the file covers) or **Replace** (wipe local BenOS data first, then match the file exactly)
+- Shows what a backup file contains before writing anything
+
+Storage is per origin, so a backup taken from `file:///…` and one taken from `http://localhost:8080` are separate sets of data. Close other BenOS tabs before restoring — an open app can save its in-memory state back over the restore.
 
 ## How to use
 

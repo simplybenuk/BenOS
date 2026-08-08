@@ -25,7 +25,8 @@ const APPS=[
   {id:"layout-builder",name:"Layout Builder",subtitle:"measured rectangles - fit planning",desc:"Build fixed-size layouts with labelled rectangles, visible measurements, snapping, overlap checks, local saves, and PNG export.",icon:"LB",href:"./apps/layout-builder/index.html",tag:"installed",version:"v1"},
   {id:"wireframe-builder",name:"Wireframe Builder",subtitle:"responsive divs - breakpoints",desc:"Sketch page layouts with positioned divs across desktop, tablet, and mobile breakpoints, then export starter HTML and CSS.",icon:"WF",href:"./apps/wireframe-builder/index.html",tag:"installed",version:"v1"},
   {id:"journey-board",name:"Journey Board",subtitle:"screenshots • connectors • export",desc:"Lay out user journey screenshots, annotate the flow, connect steps, and export a readable high-resolution review image.",icon:"🧭",href:"./apps/journey-board/index.html",tag:"installed",version:"v1"},
-  {id:"screenshot-drop",name:"Screenshot Drop",subtitle:"paste / drag screenshots",desc:"Dump screenshots from Snipping Tool, add captions, and keep a simple local visual feed.",icon:"📸",href:"./apps/screenshot-drop/index.html",tag:"installed",version:"v1"}
+  {id:"screenshot-drop",name:"Screenshot Drop",subtitle:"paste / drag screenshots",desc:"Dump screenshots from Snipping Tool, add captions, and keep a simple local visual feed.",icon:"📸",href:"./apps/screenshot-drop/index.html",tag:"installed",version:"v1"},
+  {id:"backup",name:"Backup",subtitle:"export • restore • move device",desc:"Download everything every app has stored in this browser as one JSON file, and restore it here or on another device.",icon:"💾",href:"./apps/backup/index.html",tag:"installed",version:"v1"}
 ];
 const $=id=>document.getElementById(id),grid=$("grid"),q=$("q"),meta=$("meta");
 function escapeHtml(s){return String(s).replace(/[<>&"]/g,ch=>({"<":"&lt;",">":"&gt;","&":"&amp;",'"':"&quot;"}[ch]));}

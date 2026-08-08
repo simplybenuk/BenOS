@@ -1,0 +1,588 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>BenOS · Backup</title>
+  <style>
+    :root{--bg:#0b0d10;--panel:#11151b;--panel2:#0f1318;--text:#e6edf3;--muted:#9aa4af;--border:#243041;--accent:#6ee7ff;--warn:#ffb86b;--bad:#ff8080;--mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;--sans:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+    *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans)}
+    header{position:sticky;top:0;z-index:10;background:linear-gradient(to bottom,rgba(11,13,16,.95),rgba(11,13,16,.75));backdrop-filter:blur(6px);border-bottom:1px solid var(--border)}
+    .wrap{max-width:860px;margin:0 auto;padding:16px 14px}
+    .top{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap}
+    .brand{display:flex;align-items:baseline;gap:10px;margin-right:auto;font-family:var(--mono)}.brand b{color:var(--accent)}.brand span{color:var(--muted);font-size:12px}
+    a.back{color:var(--muted);font-family:var(--mono);font-size:12px;text-decoration:none;border:1px solid var(--border);border-radius:999px;padding:6px 10px}a.back:hover{color:var(--text);border-color:#38506e}
+    main .wrap{padding-bottom:60px}
+    section{border:1px solid var(--border);background:var(--panel);border-radius:16px;padding:14px;margin:14px 0}
+    h2{font-family:var(--mono);font-size:13px;margin:0 0 6px;color:var(--text)}
+    p{margin:0 0 10px;color:var(--muted);font-size:13px;line-height:1.45}
+    .rows{border:1px solid var(--border);border-radius:12px;background:var(--panel2);overflow:hidden;margin:10px 0}
+    .row{display:flex;gap:10px;align-items:baseline;padding:9px 12px;border-bottom:1px solid var(--border);font-size:13px}
+    .row:last-child{border-bottom:0}
+    .row b{font-weight:600}.row .src{font-family:var(--mono);font-size:11px;color:var(--muted);margin-left:auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .row .detail{color:var(--muted);font-size:12px;font-family:var(--mono)}
+    .empty{padding:12px;color:var(--muted);font-size:13px}
+    .actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px}
+    button{font-family:var(--mono);font-size:12px;color:var(--text);background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:9px 13px;cursor:pointer}
+    button:hover:not(:disabled){border-color:#38506e}button:disabled{opacity:.45;cursor:not-allowed}
+    button.primary{border-color:#38506e;color:var(--accent)}
+    button.danger{color:var(--bad)}
+    label.file{font-family:var(--mono);font-size:12px;color:var(--text);background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:9px 13px;cursor:pointer;display:inline-block}
+    label.file:hover{border-color:#38506e}label.file input{display:none}
+    .status{font-family:var(--mono);font-size:12px;color:var(--muted);min-height:16px}
+    .status.bad{color:var(--bad)}.status.good{color:var(--accent)}
+    .modes{display:flex;gap:14px;flex-wrap:wrap;margin:10px 0 0}
+    .mode{display:flex;gap:8px;align-items:flex-start;font-size:13px;color:var(--text);cursor:pointer;border:1px solid var(--border);border-radius:12px;padding:10px 12px;flex:1 1 260px;background:var(--panel2)}
+    .mode input{margin-top:2px}
+    .mode span{display:block;color:var(--muted);font-size:12px;margin-top:2px}
+    .note{border-left:2px solid var(--warn);padding-left:10px;color:var(--muted);font-size:12px;line-height:1.5;margin-top:12px}
+    .drop{border:1px dashed var(--border);border-radius:12px;padding:16px;text-align:center;color:var(--muted);font-size:13px;margin-top:10px}
+    .drop.over{border-color:var(--accent);color:var(--text)}
+  </style>
+</head>
+<body>
+<header><div class="wrap top">
+  <div class="brand"><b>Backup</b><span>export &amp; restore all app data</span></div>
+  <a class="back" href="../../index.html">← BenOS</a>
+</div></header>
+
+<main><div class="wrap">
+
+  <section>
+    <h2>On this device</h2>
+    <p>Everything BenOS has stored in this browser, for this location. Data saved by apps opened from a different address (a local file vs. a local server) will not appear here.</p>
+    <div class="rows" id="scan"><div class="empty">Scanning…</div></div>
+    <div class="actions">
+      <button id="exportBtn" class="primary" type="button">Download backup</button>
+      <button id="rescanBtn" type="button">Rescan</button>
+      <span class="status" id="exportStatus"></span>
+    </div>
+  </section>
+
+  <section>
+    <h2>Restore from a backup</h2>
+    <p>Pick a backup file to see what it holds before anything is written.</p>
+    <div class="actions">
+      <label class="file">Choose file…<input id="fileInput" type="file" accept="application/json,.json" /></label>
+      <button id="clearFileBtn" type="button" hidden>Clear</button>
+      <span class="status" id="importStatus"></span>
+    </div>
+    <div class="drop" id="drop">or drop a <code>.json</code> backup here</div>
+    <div id="preview" hidden>
+      <div class="rows" id="previewRows"></div>
+      <div class="modes">
+        <label class="mode"><input type="radio" name="mode" value="merge" checked /><div><b>Merge</b><span>Overwrites anything the backup covers, leaves everything else on this device alone.</span></div></label>
+        <label class="mode"><input type="radio" name="mode" value="replace" /><div><b>Replace</b><span>Deletes all BenOS data on this device first, so it ends up matching the backup exactly.</span></div></label>
+      </div>
+      <div class="actions">
+        <button id="restoreBtn" class="primary" type="button">Restore</button>
+      </div>
+      <div class="note">Close other BenOS tabs before restoring — open apps hold their data in memory and can write it back over the restore. Reopen apps afterwards to see the restored data.</div>
+    </div>
+  </section>
+
+</div></main>
+
+<script>
+  // BenOS Backup v1
+  // - Exports every benos localStorage key and IndexedDB database to one JSON file
+  // - Restores that file on this or another device (merge or replace)
+  const BACKUP_FORMAT = "benos-backup";
+  const BACKUP_VERSION = 1;
+  const KNOWN_DBS = ["benos_journey_board", "benos_screenshot_drop"];
+  const LABELS = {
+    "benos:scratchpad:v1": "Scratchpad",
+    "benos:todo-list:v1": "To-do List",
+    "benos:layout-builder:v1": "Layout Builder",
+    "benos:wireframe-builder:v1": "Wireframe Builder",
+    "benos:okr-tracker:v1": "OKR Tracker",
+    "benos_journey_board": "Journey Board",
+    "benos_screenshot_drop": "Screenshot Drop",
+  };
+  const TYPED_ARRAYS = { Int8Array, Uint8Array, Uint8ClampedArray, Int16Array, Uint16Array, Int32Array, Uint32Array, Float32Array, Float64Array };
+
+  const $ = (id) => document.getElementById(id);
+  let pending = null;
+
+  function isBenosKey(key) {
+    return /^benos[:_-]/i.test(key);
+  }
+
+  function labelFor(source) {
+    return LABELS[source] || source;
+  }
+
+  function formatBytes(n) {
+    if (n < 1024) return `${n} B`;
+    if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+    return `${(n / 1024 / 1024).toFixed(1)} MB`;
+  }
+
+  function plural(n, word) {
+    return `${n} ${word}${n === 1 ? "" : "s"}`;
+  }
+
+  // --- value encoding (JSON-safe, blob aware) ---
+  function bytesToBase64(bytes) {
+    let binary = "";
+    const chunk = 0x8000;
+    for (let i = 0; i < bytes.length; i += chunk) {
+      binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+    }
+    return btoa(binary);
+  }
+
+  function base64ToBytes(b64) {
+    const binary = atob(b64);
+    const out = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) out[i] = binary.charCodeAt(i);
+    return out;
+  }
+
+  async function encodeValue(value) {
+    if (value === null || typeof value !== "object") return value;
+    if (value instanceof Date) return { __benos: "date", iso: value.toISOString() };
+    if (typeof Blob !== "undefined" && value instanceof Blob) {
+      const encoded = { __benos: "blob", mime: value.type || "", data: bytesToBase64(new Uint8Array(await value.arrayBuffer())) };
+      if (typeof File !== "undefined" && value instanceof File) encoded.name = value.name;
+      return encoded;
+    }
+    if (value instanceof ArrayBuffer) return { __benos: "arraybuffer", data: bytesToBase64(new Uint8Array(value)) };
+    if (ArrayBuffer.isView(value)) {
+      return { __benos: "typedarray", kind: value.constructor.name, data: bytesToBase64(new Uint8Array(value.buffer, value.byteOffset, value.byteLength)) };
+    }
+    if (Array.isArray(value)) {
+      const out = [];
+      for (const item of value) out.push(await encodeValue(item));
+      return out;
+    }
+    const out = {};
+    for (const [key, item] of Object.entries(value)) out[key] = await encodeValue(item);
+    return out;
+  }
+
+  function decodeValue(value) {
+    if (value === null || typeof value !== "object") return value;
+    if (Array.isArray(value)) return value.map(decodeValue);
+    if (value.__benos === "date") return new Date(value.iso);
+    if (value.__benos === "blob") {
+      const bytes = base64ToBytes(value.data);
+      if (typeof value.name === "string" && typeof File !== "undefined") return new File([bytes], value.name, { type: value.mime || "" });
+      return new Blob([bytes], { type: value.mime || "" });
+    }
+    if (value.__benos === "arraybuffer") return base64ToBytes(value.data).buffer;
+    if (value.__benos === "typedarray") {
+      const bytes = base64ToBytes(value.data);
+      const Ctor = TYPED_ARRAYS[value.kind];
+      return Ctor ? new Ctor(bytes.buffer) : bytes;
+    }
+    const out = {};
+    for (const [key, item] of Object.entries(value)) out[key] = decodeValue(item);
+    return out;
+  }
+
+  // --- summaries (shared by the scan and the import preview) ---
+  function countItems(raw) {
+    let parsed;
+    try { parsed = JSON.parse(raw); } catch { return null; }
+    if (Array.isArray(parsed)) return parsed.length;
+    if (parsed && typeof parsed === "object") {
+      const lists = Object.values(parsed).filter(Array.isArray);
+      if (lists.length) return lists.reduce((total, list) => total + list.length, 0);
+    }
+    return null;
+  }
+
+  function summarise(payload) {
+    const rows = [];
+    for (const [key, value] of Object.entries(payload.localStorage || {})) {
+      const text = typeof value === "string" ? value : "";
+      const items = countItems(text);
+      rows.push({ source: key, label: labelFor(key), detail: `${items === null ? "saved data" : plural(items, "item")} · ${formatBytes(text.length)}` });
+    }
+    for (const [name, db] of Object.entries(payload.databases || {})) {
+      const stores = Object.values(db.stores || {});
+      const records = stores.reduce((total, store) => total + (store.records ? store.records.length : 0), 0);
+      const bytes = JSON.stringify(db).length;
+      rows.push({ source: name, label: labelFor(name), detail: `${plural(records, "record")} · ${formatBytes(bytes)}` });
+    }
+    return rows.sort((a, b) => a.label.localeCompare(b.label));
+  }
+
+  function renderRows(container, rows, emptyMessage) {
+    container.innerHTML = "";
+    if (!rows.length) {
+      const empty = document.createElement("div");
+      empty.className = "empty";
+      empty.textContent = emptyMessage;
+      container.appendChild(empty);
+      return;
+    }
+    for (const row of rows) {
+      const el = document.createElement("div");
+      el.className = "row";
+      const name = document.createElement("b");
+      name.textContent = row.label;
+      const detail = document.createElement("span");
+      detail.className = "detail";
+      detail.textContent = row.detail;
+      const src = document.createElement("span");
+      src.className = "src";
+      src.textContent = row.source;
+      el.append(name, detail, src);
+      container.appendChild(el);
+    }
+  }
+
+  function setStatus(el, message, tone = "") {
+    el.textContent = message;
+    el.className = `status${tone ? ` ${tone}` : ""}`;
+  }
+
+  // --- localStorage ---
+  function readLocalStorage() {
+    const out = {};
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && isBenosKey(key)) out[key] = localStorage.getItem(key);
+    }
+    return out;
+  }
+
+  function clearLocalStorage() {
+    for (const key of Object.keys(readLocalStorage())) localStorage.removeItem(key);
+  }
+
+  // --- IndexedDB ---
+  function request(req) {
+    return new Promise((resolve, reject) => {
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  function openExisting(name) {
+    // Opening a database creates it, so drop anything that did not already exist.
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open(name);
+      let created = false;
+      req.onupgradeneeded = (event) => { if (event.oldVersion === 0) created = true; };
+      req.onblocked = () => reject(new Error(`"${name}" is in use — close other BenOS tabs.`));
+      req.onerror = () => reject(req.error);
+      req.onsuccess = () => {
+        const db = req.result;
+        if (!created) return resolve(db);
+        db.close();
+        indexedDB.deleteDatabase(name);
+        resolve(null);
+      };
+    });
+  }
+
+  async function listDatabases() {
+    if (indexedDB.databases) {
+      try {
+        const found = await indexedDB.databases();
+        return found.map((info) => info && info.name).filter((name) => name && /^benos/i.test(name)).sort();
+      } catch { /* fall through to the known list */ }
+    }
+    return [...KNOWN_DBS].sort();
+  }
+
+  async function countRecords(db) {
+    const counts = {};
+    for (const storeName of [...db.objectStoreNames]) {
+      counts[storeName] = await request(db.transaction(storeName, "readonly").objectStore(storeName).count());
+    }
+    return counts;
+  }
+
+  function readAllRecords(db, storeName) {
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(storeName, "readonly");
+      const req = tx.objectStore(storeName).openCursor();
+      const out = [];
+      req.onsuccess = () => {
+        const cursor = req.result;
+        if (!cursor) return resolve(out);
+        out.push({ key: cursor.key, value: cursor.value });
+        cursor.continue();
+      };
+      req.onerror = () => reject(req.error);
+      tx.onabort = () => reject(tx.error);
+    });
+  }
+
+  function storeMeta(db, storeName) {
+    const store = db.transaction(storeName, "readonly").objectStore(storeName);
+    return {
+      keyPath: store.keyPath === undefined ? null : store.keyPath,
+      autoIncrement: store.autoIncrement,
+      indexes: [...store.indexNames].map((indexName) => {
+        const index = store.index(indexName);
+        return { name: index.name, keyPath: index.keyPath, unique: index.unique, multiEntry: index.multiEntry };
+      }),
+    };
+  }
+
+  async function exportDatabase(name) {
+    const db = await openExisting(name);
+    if (!db) return null;
+    try {
+      const stores = {};
+      for (const storeName of [...db.objectStoreNames]) {
+        const meta = storeMeta(db, storeName);
+        const raw = await readAllRecords(db, storeName);
+        meta.records = [];
+        for (const record of raw) {
+          meta.records.push({ key: await encodeValue(record.key), value: await encodeValue(record.value) });
+        }
+        stores[storeName] = meta;
+      }
+      return { version: db.version, stores };
+    } finally {
+      db.close();
+    }
+  }
+
+  function openWithSchema(name, info) {
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open(name, info.version);
+      req.onupgradeneeded = () => {
+        const db = req.result;
+        for (const [storeName, meta] of Object.entries(info.stores || {})) {
+          const store = db.objectStoreNames.contains(storeName)
+            ? req.transaction.objectStore(storeName)
+            : db.createObjectStore(storeName, { keyPath: meta.keyPath === null ? undefined : meta.keyPath, autoIncrement: !!meta.autoIncrement });
+          for (const index of meta.indexes || []) {
+            if (!store.indexNames.contains(index.name)) store.createIndex(index.name, index.keyPath, { unique: !!index.unique, multiEntry: !!index.multiEntry });
+          }
+        }
+      };
+      req.onblocked = () => reject(new Error(`"${name}" is in use — close other BenOS tabs.`));
+      req.onerror = () => reject(req.error);
+      req.onsuccess = () => resolve(req.result);
+    });
+  }
+
+  async function targetVersion(name, info) {
+    // Creating stores needs an upgrade, so land on a version high enough to trigger one.
+    const existing = await openExisting(name);
+    if (!existing) return Math.max(1, info.version || 1);
+    const missing = Object.keys(info.stores || {}).some((storeName) => !existing.objectStoreNames.contains(storeName));
+    const current = existing.version;
+    existing.close();
+    return Math.max(current + (missing ? 1 : 0), info.version || 1, 1);
+  }
+
+  function deleteDatabase(name) {
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.deleteDatabase(name);
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+      req.onblocked = () => reject(new Error(`"${name}" is in use — close other BenOS tabs.`));
+    });
+  }
+
+  function writeRecords(db, storeName, records, keyPath) {
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(storeName, "readwrite");
+      const store = tx.objectStore(storeName);
+      for (const record of records) {
+        if (keyPath === null || keyPath === undefined) store.put(record.value, record.key);
+        else store.put(record.value);
+      }
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+      tx.onabort = () => reject(tx.error);
+    });
+  }
+
+  // --- export ---
+  async function buildBackup() {
+    const payload = {
+      format: BACKUP_FORMAT,
+      version: BACKUP_VERSION,
+      exportedAt: new Date().toISOString(),
+      origin: location.origin === "null" ? location.href : location.origin,
+      localStorage: readLocalStorage(),
+      databases: {},
+    };
+    for (const name of await listDatabases()) {
+      const db = await exportDatabase(name);
+      if (db) payload.databases[name] = db;
+    }
+    return payload;
+  }
+
+  function downloadBackup(payload) {
+    const text = JSON.stringify(payload);
+    const blob = new Blob([text], { type: "application/json" });
+    const stamp = new Date().toISOString().slice(0, 10);
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `benos-backup-${stamp}.json`;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(link.href), 1500);
+    return text.length;
+  }
+
+  // --- import ---
+  function parseBackup(text) {
+    let data;
+    try { data = JSON.parse(text); } catch { throw new Error("That file is not valid JSON."); }
+    if (!data || typeof data !== "object" || data.format !== BACKUP_FORMAT) throw new Error("That file is not a BenOS backup.");
+    if (typeof data.version !== "number" || data.version > BACKUP_VERSION) throw new Error("That backup was made by a newer version of this app.");
+    if (!data.localStorage || typeof data.localStorage !== "object") data.localStorage = {};
+    if (!data.databases || typeof data.databases !== "object") data.databases = {};
+    return data;
+  }
+
+  async function restore(payload, mode) {
+    const report = { keys: 0, records: 0, removed: 0 };
+    if (mode === "replace") {
+      clearLocalStorage();
+      const local = await listDatabases();
+      for (const name of new Set([...local, ...Object.keys(payload.databases)])) {
+        const existing = await openExisting(name);
+        if (!existing) continue;
+        existing.close();
+        await deleteDatabase(name);
+        report.removed++;
+      }
+    }
+
+    for (const [key, value] of Object.entries(payload.localStorage)) {
+      if (typeof value !== "string") continue;
+      localStorage.setItem(key, value);
+      report.keys++;
+    }
+
+    for (const [name, info] of Object.entries(payload.databases)) {
+      const version = await targetVersion(name, info);
+      const db = await openWithSchema(name, { ...info, version });
+      try {
+        for (const [storeName, meta] of Object.entries(info.stores || {})) {
+          const records = (meta.records || []).map((record) => ({ key: decodeValue(record.key), value: decodeValue(record.value) }));
+          if (!records.length) continue;
+          await writeRecords(db, storeName, records, meta.keyPath);
+          report.records += records.length;
+        }
+      } finally {
+        db.close();
+      }
+    }
+    return report;
+  }
+
+  // --- wiring ---
+  async function scan() {
+    const rows = [];
+    for (const [key, value] of Object.entries(readLocalStorage())) {
+      const items = countItems(value);
+      rows.push({ source: key, label: labelFor(key), detail: `${items === null ? "saved data" : plural(items, "item")} · ${formatBytes(value.length)}` });
+    }
+    for (const name of await listDatabases()) {
+      const db = await openExisting(name);
+      if (!db) continue;
+      try {
+        const counts = await countRecords(db);
+        const total = Object.values(counts).reduce((sum, n) => sum + n, 0);
+        rows.push({ source: name, label: labelFor(name), detail: plural(total, "record") });
+      } finally {
+        db.close();
+      }
+    }
+    renderRows($("scan"), rows.sort((a, b) => a.label.localeCompare(b.label)), "No BenOS data found in this browser.");
+    $("exportBtn").disabled = !rows.length;
+  }
+
+  async function runScan() {
+    try {
+      await scan();
+      setStatus($("exportStatus"), "");
+    } catch (error) {
+      renderRows($("scan"), [], "Could not read local data.");
+      setStatus($("exportStatus"), error.message || String(error), "bad");
+    }
+  }
+
+  function showPreview(payload) {
+    pending = payload;
+    renderRows($("previewRows"), summarise(payload), "That backup is empty.");
+    $("preview").hidden = false;
+    $("clearFileBtn").hidden = false;
+    const when = new Date(payload.exportedAt);
+    const stamp = isNaN(when) ? "unknown date" : when.toLocaleString();
+    setStatus($("importStatus"), `Backup from ${stamp}`, "good");
+  }
+
+  function clearPreview() {
+    pending = null;
+    $("preview").hidden = true;
+    $("clearFileBtn").hidden = true;
+    $("fileInput").value = "";
+    setStatus($("importStatus"), "");
+  }
+
+  async function loadFile(file) {
+    if (!file) return;
+    try {
+      showPreview(parseBackup(await file.text()));
+    } catch (error) {
+      pending = null;
+      $("preview").hidden = true;
+      setStatus($("importStatus"), error.message || String(error), "bad");
+    }
+  }
+
+  $("exportBtn").addEventListener("click", async () => {
+    const button = $("exportBtn");
+    button.disabled = true;
+    setStatus($("exportStatus"), "Collecting…");
+    try {
+      const size = downloadBackup(await buildBackup());
+      setStatus($("exportStatus"), `Downloaded · ${formatBytes(size)}`, "good");
+    } catch (error) {
+      setStatus($("exportStatus"), error.message || String(error), "bad");
+    } finally {
+      button.disabled = false;
+    }
+  });
+
+  $("rescanBtn").addEventListener("click", runScan);
+  $("fileInput").addEventListener("change", (event) => loadFile(event.target.files[0]));
+  $("clearFileBtn").addEventListener("click", clearPreview);
+
+  const drop = $("drop");
+  drop.addEventListener("dragover", (event) => { event.preventDefault(); drop.classList.add("over"); });
+  drop.addEventListener("dragleave", () => drop.classList.remove("over"));
+  drop.addEventListener("drop", (event) => {
+    event.preventDefault();
+    drop.classList.remove("over");
+    loadFile(event.dataTransfer.files[0]);
+  });
+
+  $("restoreBtn").addEventListener("click", async () => {
+    if (!pending) return;
+    const mode = document.querySelector('input[name="mode"]:checked').value;
+    if (mode === "replace" && !confirm("Delete all BenOS data in this browser and replace it with the backup?")) return;
+    const button = $("restoreBtn");
+    button.disabled = true;
+    setStatus($("importStatus"), "Restoring…");
+    try {
+      const report = await restore(pending, mode);
+      clearPreview();
+      await runScan();
+      setStatus($("importStatus"), `Restored ${plural(report.keys, "key")} and ${plural(report.records, "record")}. Reopen apps to see it.`, "good");
+    } catch (error) {
+      setStatus($("importStatus"), error.message || String(error), "bad");
+    } finally {
+      button.disabled = false;
+    }
+  });
+
+  runScan();
+</script>
+</body>
+</html>
