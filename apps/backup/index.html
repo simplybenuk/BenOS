@@ -3,16 +3,17 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>BenOS · Backup</title>
+  <title>BenOS • Backup</title>
   <style>
-    :root{--bg:#0b0d10;--panel:#11151b;--panel2:#0f1318;--text:#e6edf3;--muted:#9aa4af;--border:#243041;--accent:#6ee7ff;--warn:#ffb86b;--bad:#ff8080;--mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;--sans:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+    :root{--bg:#0b0d10;--panel:#11151b;--panel2:#0f1318;--text:#e6edf3;--muted:#9aa4af;--border:#243041;--accent:#6ee7ff;--warn:#ffb86b;--bad:#ff8080;--mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;--sans:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji"}
     *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans)}
-    header{position:sticky;top:0;z-index:10;background:linear-gradient(to bottom,rgba(11,13,16,.95),rgba(11,13,16,.75));backdrop-filter:blur(6px);border-bottom:1px solid var(--border)}
-    .wrap{max-width:860px;margin:0 auto;padding:16px 14px}
-    .top{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap}
-    .brand{display:flex;align-items:baseline;gap:10px;margin-right:auto;font-family:var(--mono)}.brand b{color:var(--accent)}.brand span{color:var(--muted);font-size:12px}
-    a.back{color:var(--muted);font-family:var(--mono);font-size:12px;text-decoration:none;border:1px solid var(--border);border-radius:999px;padding:6px 10px}a.back:hover{color:var(--text);border-color:#38506e}
-    main .wrap{padding-bottom:60px}
+    button,input{font:inherit}
+    header{position:sticky;top:0;z-index:10;background:linear-gradient(to bottom,rgba(11,13,16,.96),rgba(11,13,16,.78));backdrop-filter:blur(6px);border-bottom:1px solid var(--border)}
+    .wrap{max-width:680px;margin:0 auto;padding:14px}
+    .toprow{display:flex;gap:10px;align-items:center}
+    .brand{display:flex;align-items:baseline;gap:10px;color:inherit;font-family:var(--mono);text-decoration:none}.brand b{color:var(--accent)}.brand span{color:var(--muted);font-size:12px}
+    .count{margin-left:auto;color:var(--muted);font:12px var(--mono)}
+    main .wrap{padding-top:18px;padding-bottom:72px}
     section{border:1px solid var(--border);background:var(--panel);border-radius:16px;padding:14px;margin:14px 0}
     h2{font-family:var(--mono);font-size:13px;margin:0 0 6px;color:var(--text)}
     p{margin:0 0 10px;color:var(--muted);font-size:13px;line-height:1.45}
@@ -23,12 +24,12 @@
     .row .detail{color:var(--muted);font-size:12px;font-family:var(--mono)}
     .empty{padding:12px;color:var(--muted);font-size:13px}
     .actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px}
-    button{font-family:var(--mono);font-size:12px;color:var(--text);background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:9px 13px;cursor:pointer}
-    button:hover:not(:disabled){border-color:#38506e}button:disabled{opacity:.45;cursor:not-allowed}
-    button.primary{border-color:#38506e;color:var(--accent)}
-    button.danger{color:var(--bad)}
-    label.file{font-family:var(--mono);font-size:12px;color:var(--text);background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:9px 13px;cursor:pointer;display:inline-block}
-    label.file:hover{border-color:#38506e}label.file input{display:none}
+    button,label.file{border:1px solid var(--border);border-radius:10px;padding:8px 11px;background:var(--panel);color:var(--text);cursor:pointer;font:12px var(--mono)}
+    button:hover:not(:disabled),label.file:hover{border-color:#38506e}
+    button:active:not(:disabled),label.file:active{transform:translateY(1px)}
+    button:disabled{opacity:.45;cursor:not-allowed}
+    button.primary{border-color:#2a8aa0;color:var(--accent)}
+    label.file input{display:none}
     .status{font-family:var(--mono);font-size:12px;color:var(--muted);min-height:16px}
     .status.bad{color:var(--bad)}.status.good{color:var(--accent)}
     .modes{display:flex;gap:14px;flex-wrap:wrap;margin:10px 0 0}
@@ -41,10 +42,14 @@
   </style>
 </head>
 <body>
-<header><div class="wrap top">
-  <div class="brand"><b>Backup</b><span>export &amp; restore all app data</span></div>
-  <a class="back" href="../../index.html">← BenOS</a>
-</div></header>
+<header>
+  <div class="wrap toprow">
+    <a class="brand" href="../../index.html" aria-label="Back to BenOS dashboard">
+      <b>BenOS</b><span>backup</span>
+    </a>
+    <span class="count" id="count"></span>
+  </div>
+</header>
 
 <main><div class="wrap">
 
@@ -494,6 +499,7 @@
       }
     }
     renderRows($("scan"), rows.sort((a, b) => a.label.localeCompare(b.label)), "No BenOS data found in this browser.");
+    $("count").textContent = plural(rows.length, "app");
     $("exportBtn").disabled = !rows.length;
   }
 
