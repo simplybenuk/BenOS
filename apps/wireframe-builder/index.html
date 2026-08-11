@@ -37,13 +37,34 @@
     .palette{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}.colorBtn{height:28px;border-radius:8px;padding:0}.colorBtn.active{outline:2px solid var(--accent);outline-offset:2px}
     .metric{display:grid;grid-template-columns:1fr auto;gap:8px;font:12px var(--mono);color:var(--muted);padding:4px 0}.metric strong{color:var(--text);font-weight:700}
     .code{height:260px;white-space:pre;overflow:auto;color:#d7e1ea}
-    .toast{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);background:rgba(17,21,27,.96);border:1px solid var(--border);padding:10px 13px;border-radius:999px;font:12px var(--mono);opacity:0;pointer-events:none;transition:.16s;z-index:10}.toast.show{opacity:1}
-    @media(max-width:1120px){header{height:104px}main{height:calc(100vh - 104px);grid-template-columns:240px 1fr}.right{position:absolute;right:0;top:104px;bottom:0;width:320px;max-width:88vw;z-index:4;box-shadow:-18px 0 28px rgba(0,0,0,.3)}.grow,.status{display:none}}
+    .mobilePanels{display:none}.scrim{display:none}.toast{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);background:rgba(17,21,27,.96);border:1px solid var(--border);padding:10px 13px;border-radius:999px;font:12px var(--mono);opacity:0;pointer-events:none;transition:.16s;z-index:10}.toast.show{opacity:1}
+    @media(max-width:1120px){
+      main{height:calc(100dvh - var(--header-h,62px));grid-template-columns:240px 1fr}
+      .mobilePanels{display:flex;gap:6px}.mobilePanels button{height:36px}#toggleElements{display:none}
+      .right{position:fixed;right:0;top:var(--header-h,62px);bottom:0;width:330px;max-width:92vw;z-index:8;box-shadow:-18px 0 28px rgba(0,0,0,.3);transform:translateX(105%);transition:transform .2s ease}.right.open{transform:translateX(0)}
+      .scrim{position:fixed;inset:var(--header-h,62px) 0 0;background:rgba(0,0,0,.45);border:0;z-index:7}.scrim.open{display:block}.grow,.status{display:none}
+    }
+    @media(max-width:760px){
+      header{height:58px;min-height:58px;flex-wrap:nowrap;overflow-x:auto;padding:8px;gap:6px;scrollbar-width:none}header::-webkit-scrollbar{display:none}
+      .brand{margin-right:0;flex:none}.brand span{display:none}.brand b{font-size:13px}
+      header button,header select,header input{flex:none;height:36px}.name{width:150px}.divider{display:none}
+      .mobilePanels{position:sticky;left:0}.mobilePanels button{padding:7px 9px}#toggleElements{display:block}
+      main{grid-template-columns:1fr}
+      .left,.right{position:fixed;top:var(--header-h,58px);bottom:0;width:min(360px,92vw);max-width:none;z-index:8;transition:transform .2s ease;box-shadow:0 12px 30px rgba(0,0,0,.4)}
+      .left{left:0;transform:translateX(-105%)}.left.open{transform:translateX(0)}
+      .right{right:0;transform:translateX(105%)}.right.open{transform:translateX(0)}
+      .viewport{min-width:0}.viewport #stage{padding:28px 20px 38px}.pageLabel{top:-30px;font-size:11px}.scrim{inset:var(--header-h,58px) 0 0}
+      .panel{padding:12px}.fields{gap:9px}.field input,.field select{min-height:38px;font-size:16px}.actions button{min-height:40px}.tab{height:40px}.row{min-height:48px}.row button{height:32px}
+    }
   </style>
 </head>
 <body>
-<header>
+<header id="appHeader">
   <a class="brand" href="../../index.html" aria-label="Back to BenOS"><b>BenOS</b><span>wireframe builder</span></a>
+  <div class="mobilePanels" aria-label="Panels">
+    <button id="toggleElements" aria-controls="elementsPanel" aria-expanded="false">Elements</button>
+    <button id="toggleInspector" aria-controls="inspectorPanel" aria-expanded="false">Inspect</button>
+  </div>
   <select id="projectSelect" aria-label="Saved wireframes"></select>
   <input id="projectName" class="name" aria-label="Wireframe name" placeholder="Wireframe name" />
   <button id="newProject">New</button>
@@ -58,7 +79,7 @@
 </header>
 
 <main>
-  <aside class="left">
+  <aside class="left" id="elementsPanel">
     <section class="panel">
       <div class="panelTitle"><strong>Breakpoint</strong></div>
       <div class="tabs" id="tabs"></div>
@@ -78,7 +99,7 @@
     </div>
   </section>
 
-  <aside class="right">
+  <aside class="right" id="inspectorPanel">
     <section class="panel">
       <div class="panelTitle"><strong>Page</strong><span id="pageMeta"></span></div>
       <div class="fields">
@@ -125,6 +146,7 @@
   </aside>
 </main>
 
+<button id="panelScrim" class="scrim" aria-label="Close panel"></button>
 <div id="toast" class="toast"></div>
 
 <script>
@@ -137,7 +159,7 @@
   ];
   const COLORS = ["#dbeafe","#dcfce7","#fef3c7","#fee2e2","#ede9fe","#e0f2fe","#fce7f3","#f3f4f6","#cffafe","#ffedd5","#ccfbf1","#e5e7eb"];
   const $ = id => document.getElementById(id);
-  const page = $("page"), viewport = $("viewport"), toast = $("toast");
+  const page = $("page"), viewport = $("viewport"), toast = $("toast"), header = $("appHeader");
   let state = load(), currentId = state.currentId || state.projects[0].id, bp = state.breakpoint || "desktop", selectedId = null;
   let ppu = 1, zoom = 1, drag = null, saveTimer = null;
 
@@ -188,6 +210,7 @@
     $("palette").innerHTML = COLORS.map(c => `<button class="colorBtn" data-color="${c}" title="${c}" aria-label="${c}" style="background:${c}"></button>`).join("");
   }
   function render(){
+    syncLayout();
     const p = current(), pageData = p.pages[bp] || breakpoint();
     $("projectName").value = p.name || "";
     $("pageW").value = pageData.w; $("pageH").value = pageData.h; $("gridSize").value = p.grid; $("snap").value = p.snap ? "on" : "off";
@@ -201,6 +224,17 @@
     renderInspector();
     renderCode();
     renderPicker();
+  }
+  function syncLayout(){
+    document.documentElement.style.setProperty("--header-h", `${header.offsetHeight}px`);
+  }
+  function setPanel(panel){
+    const elementsOpen = panel === "elements", inspectorOpen = panel === "inspector";
+    $("elementsPanel").classList.toggle("open", elementsOpen);
+    $("inspectorPanel").classList.toggle("open", inspectorOpen);
+    $("toggleElements").setAttribute("aria-expanded", String(elementsOpen));
+    $("toggleInspector").setAttribute("aria-expanded", String(inspectorOpen));
+    $("panelScrim").classList.toggle("open", Boolean(panel));
   }
   function calculateScale(){
     const pageData = current().pages[bp] || breakpoint();
@@ -344,6 +378,9 @@
   $("addBlock").addEventListener("click", () => addItem());
   $("copyBreakpoint").addEventListener("click", copyBreakpoint);
   $("fitView").addEventListener("click", fit);
+  $("toggleElements").addEventListener("click", () => setPanel($("elementsPanel").classList.contains("open") ? null : "elements"));
+  $("toggleInspector").addEventListener("click", () => setPanel($("inspectorPanel").classList.contains("open") ? null : "inspector"));
+  $("panelScrim").addEventListener("click", () => setPanel(null));
   $("tabs").addEventListener("click", e => { const tab = e.target.closest("[data-bp]"); if (!tab) return; bp = tab.dataset.bp; selectedId = selectedId && current().items.some(i => i.id === selectedId) ? selectedId : current().items[0]?.id || null; zoom = 1; saveSoon(); render(); });
   $("list").addEventListener("click", e => { const copy = e.target.closest("[data-copy]"); if (copy){ duplicateItem(copy.dataset.copy); return; } const row = e.target.closest("[data-id]"); if (row){ selectedId = row.dataset.id; render(); } });
   $("pageW").addEventListener("change", e => { current().pages[bp].w = Math.max(1, Number(e.target.value) || 1); clampFrames(); saveSoon(); render(); });
@@ -368,8 +405,8 @@
   page.addEventListener("pointercancel", e => { if (drag && e.pointerId === drag.pointerId) drag = null; });
   page.addEventListener("click", e => { if (e.target === page){ selectedId = null; render(); } });
   viewport.addEventListener("wheel", e => { if (!e.ctrlKey && !e.metaKey) return; e.preventDefault(); zoom = clamp(zoom + (e.deltaY < 0 ? .1 : -.1), .35, 3); calculateScale(); renderBlocks(); }, {passive:false});
-  window.addEventListener("resize", render);
-  document.addEventListener("keydown", e => { if (e.target.matches("input,select,textarea")) return; if (e.key === "Delete" || e.key === "Backspace") deleteItem(); });
+  window.addEventListener("resize", () => { if (window.innerWidth > 1120) setPanel(null); render(); });
+  document.addEventListener("keydown", e => { if (e.key === "Escape") setPanel(null); if (e.target.matches("input,select,textarea")) return; if (e.key === "Delete" || e.key === "Backspace") deleteItem(); });
 
   selectedId = current().items[0]?.id || null;
   render();
