@@ -31,8 +31,8 @@
     #page{position:relative;background:var(--paper);color:var(--ink);border:1px solid #d5dbe3;overflow:hidden;touch-action:none}
     #page.grid::before{content:"";position:absolute;inset:0;background-image:linear-gradient(to right,rgba(90,108,130,.13) 1px,transparent 1px),linear-gradient(to bottom,rgba(90,108,130,.13) 1px,transparent 1px);background-size:var(--grid) var(--grid);pointer-events:none;z-index:0}
     .pageLabel{position:absolute;left:50%;top:-34px;transform:translateX(-50%);font:12px var(--mono);color:#d7e1ea;background:rgba(11,13,16,.92);border:1px solid var(--border);border-radius:999px;padding:5px 9px;white-space:nowrap}
-    .block{position:absolute;background:var(--block,#dbeafe);border:1px solid var(--stroke,rgba(24,33,43,.34));border-radius:var(--radius,6px);cursor:grab;touch-action:none;z-index:1;overflow:hidden}
-    .block.selected{outline:3px solid #11151b;outline-offset:3px}.block:active{cursor:grabbing}.block.hidden{display:none}.block .body{position:absolute;inset:0;display:grid;align-content:center;justify-items:center;text-align:center;padding:7px;pointer-events:none}.block b{font:700 12px/1.2 var(--mono);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.block span{font:10px/1.2 var(--mono);color:rgba(24,33,43,.62);margin-top:3px}.handle{position:absolute;right:0;bottom:0;width:44px;height:44px;border:0;background:transparent;cursor:nwse-resize;pointer-events:auto;touch-action:none}.handle::after{content:"";position:absolute;right:6px;bottom:6px;width:14px;height:14px;border:2px solid #11151b;border-radius:50%;background:var(--accent)}
+    .block{position:absolute;background:var(--block,#dbeafe);border:var(--stroke-w,1px) solid var(--stroke,rgba(24,33,43,.34));border-radius:var(--radius,6px);cursor:grab;touch-action:none;z-index:1;overflow:hidden}
+    .block.selected{outline:3px solid #11151b;outline-offset:3px}.block:active{cursor:grabbing}.block.hidden{display:none}.block .body{position:absolute;inset:0;display:grid;align-content:center;justify-items:center;text-align:center;padding:7px;pointer-events:none}.block b{font:700 12px/1.2 var(--mono);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.block p{margin:0;font:12px/1.35 var(--sans);max-width:100%;overflow:hidden}.block .icon{width:34px;height:34px}.block .icon svg{width:100%;height:100%;stroke-width:1.8}.handle{position:absolute;right:0;bottom:0;width:44px;height:44px;border:0;background:transparent;cursor:nwse-resize;pointer-events:auto;touch-action:none}.handle::after{content:"";position:absolute;right:6px;bottom:6px;width:14px;height:14px;border:2px solid #11151b;border-radius:50%;background:var(--accent)}
     .empty{position:absolute;inset:18px;border:1px dashed #98a5b5;border-radius:12px;display:grid;place-items:center;color:#65717f;font:12px var(--mono);z-index:0}
     .palette{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}.colorBtn{height:28px;border-radius:8px;padding:0}.colorBtn.active{outline:2px solid var(--accent);outline-offset:2px}
     .metric{display:grid;grid-template-columns:1fr auto;gap:8px;font:12px var(--mono);color:var(--muted);padding:4px 0}.metric strong{color:var(--text);font-weight:700}
@@ -116,14 +116,21 @@
       <div class="panelTitle"><strong>Selection</strong><span id="selectionMeta"></span></div>
       <div class="fields">
         <div class="field"><label>Name</label><input id="itemLabel"></div>
-        <div class="field"><label>Tag</label><select id="itemTag"><option>div</option><option>p</option><option>header</option><option>main</option><option>section</option><option>nav</option><option>aside</option><option>footer</option><option>button</option></select></div>
+        <div class="field"><label>Tag</label><select id="itemTag"><option>div</option><option>p</option><option value="icon">Icon</option><option>header</option><option>main</option><option>section</option><option>nav</option><option>aside</option><option>footer</option><option>button</option></select></div>
         <div class="field"><label>X</label><input id="itemX" type="number" step="1"></div>
         <div class="field"><label>Y</label><input id="itemY" type="number" step="1"></div>
         <div class="field"><label>Width</label><input id="itemW" type="number" min="1" step="1"></div>
         <div class="field"><label>Height</label><input id="itemH" type="number" min="1" step="1"></div>
         <div class="field"><label>Radius</label><input id="itemRadius" type="number" min="0" step="1"></div>
         <div class="field"><label>Visible</label><select id="itemVisible"><option value="yes">Yes</option><option value="no">No</option></select></div>
+        <div class="field"><label>Show title</label><select id="itemShowTitle"><option value="yes">Yes</option><option value="no">No</option></select></div>
+        <div class="field"><label>Background</label><select id="itemBackgroundMode"><option value="color">Colour</option><option value="transparent">Transparent</option></select></div>
+        <div class="field" id="itemBackgroundColorField"><label>Background colour</label><input id="itemBackgroundColor" type="color"></div>
+        <div class="field"><label>Border</label><select id="itemBorderMode"><option value="color">Colour</option><option value="none">None</option></select></div>
+        <div class="field" id="itemBorderColorField"><label>Border colour</label><input id="itemBorderColor" type="color"></div>
+        <div class="field" id="itemBorderWeightField"><label>Border weight</label><input id="itemBorderWeight" type="number" min="0" max="20" step="1"></div>
         <div class="field full textInput" id="itemTextField" hidden><label>Text</label><textarea id="itemText" placeholder="Write paragraph text…"></textarea></div>
+        <div class="field full" id="itemIconField" hidden><label>Icon</label><select id="itemIcon"><option value="Heart">Heart</option><option value="Star">Star</option><option value="Home">Home</option><option value="User">User</option><option value="Menu">Menu</option><option value="Search">Search</option><option value="Camera">Camera</option><option value="Mail">Mail</option><option value="Settings">Settings</option><option value="ArrowRight">Arrow right</option><option value="Check">Check</option><option value="X">Close</option></select></div>
       </div>
       <div class="actions">
         <button id="duplicateItem">Duplicate</button>
@@ -153,6 +160,7 @@
 <button id="mobileAdd" class="mobileAdd" aria-label="Add a new div">+ Add div</button>
 <div id="toast" class="toast"></div>
 
+<script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.js"></script>
 <script>
 (() => {
   const KEY = "benos:wireframe-builder:v1";
@@ -207,6 +215,8 @@
   }
   function itemName(item){ return item.label.trim() || item.tag || "div"; }
   function itemText(item){ return item.tag === "p" ? (item.text || "Paragraph text") : itemName(item); }
+  function exportContent(item){ return item.tag === "p" ? itemText(item) : item.showTitle === false ? "" : itemName(item); }
+  function iconName(name){ return String(name || "Heart").replace(/([a-z])([A-Z])/g,"$1-$2").toLowerCase(); }
   function renderPicker(){
     $("projectSelect").innerHTML = state.projects.map(p => `<option value="${p.id}"${p.id === currentId ? " selected" : ""}>${esc(p.name || "Untitled wireframe")}</option>`).join("");
   }
@@ -266,10 +276,14 @@
       el.className = `block${item.id === selectedId ? " selected" : ""}${f.visible === false ? " hidden" : ""}`;
       el.dataset.id = item.id;
       el.style.left = `${f.x * ppu}px`; el.style.top = `${f.y * ppu}px`; el.style.width = `${f.w * ppu}px`; el.style.height = `${f.h * ppu}px`;
-      el.style.setProperty("--block", item.color || COLORS[0]); el.style.setProperty("--radius", `${item.radius || 0}px`);
-      el.innerHTML = `<div class="body"><b>${esc(itemText(item))}</b><span>${item.tag} - ${f.w} x ${f.h}</span></div><div class="handle"></div>`;
+      el.style.setProperty("--block", item.backgroundMode === "transparent" ? "transparent" : (item.color || COLORS[0]));
+      el.style.setProperty("--stroke", item.borderMode === "none" ? "transparent" : (item.borderColor || "rgba(24,33,43,.34)"));
+      el.style.setProperty("--stroke-w", item.borderMode === "none" ? "0px" : `${item.borderWeight ?? 1}px`); el.style.setProperty("--radius", `${item.radius || 0}px`);
+      const content = item.tag === "icon" ? `<span class="icon"><i data-lucide="${iconName(item.icon)}"></i></span>` : item.tag === "p" ? `<p>${esc(itemText(item))}</p>` : item.showTitle === false ? "" : `<b>${esc(itemName(item))}</b>`;
+      el.innerHTML = `<div class="body">${content}</div><div class="handle"></div>`;
       page.appendChild(el);
     }
+    window.lucide?.createIcons?.({icons:window.lucide});
     $("elementMetric").textContent = p.items.length;
     $("visibleMetric").textContent = p.items.filter(i => frame(i).visible !== false).length;
     $("count").textContent = p.items.length;
@@ -286,15 +300,19 @@
   function renderInspector(){
     const item = selected(), f = item ? frame(item) : null;
     $("selectionMeta").textContent = item ? `${item.tag} - ${f.w} x ${f.h}` : "None";
-    for (const id of ["itemLabel","itemTag","itemX","itemY","itemW","itemH","itemRadius","itemVisible","itemText"]) $(id).disabled = !item;
+    for (const id of ["itemLabel","itemTag","itemX","itemY","itemW","itemH","itemRadius","itemVisible","itemText","itemShowTitle","itemBackgroundMode","itemBackgroundColor","itemBorderMode","itemBorderColor","itemBorderWeight","itemIcon"]) $(id).disabled = !item;
     for (const id of ["duplicateItem","deleteItem"]) $(id).disabled = !item;
     $("itemTextField").hidden = !item || item.tag !== "p";
+    $("itemIconField").hidden = !item || item.tag !== "icon";
+    $("itemBackgroundColorField").hidden = !item || item.backgroundMode === "transparent";
+    $("itemBorderColorField").hidden = !item || item.borderMode === "none";
+    $("itemBorderWeightField").hidden = !item || item.borderMode === "none";
     document.querySelectorAll(".colorBtn").forEach(btn => btn.classList.toggle("active", item && btn.dataset.color === item.color));
     if (!item){
-      $("itemLabel").value = ""; $("itemTag").value = "div"; $("itemX").value = ""; $("itemY").value = ""; $("itemW").value = ""; $("itemH").value = ""; $("itemRadius").value = ""; $("itemVisible").value = "yes"; $("itemText").value = "";
+      $("itemLabel").value = ""; $("itemTag").value = "div"; $("itemX").value = ""; $("itemY").value = ""; $("itemW").value = ""; $("itemH").value = ""; $("itemRadius").value = ""; $("itemVisible").value = "yes"; $("itemText").value = ""; $("itemShowTitle").value = "yes"; $("itemBackgroundMode").value = "color"; $("itemBackgroundColor").value = COLORS[0]; $("itemBorderMode").value = "color"; $("itemBorderColor").value = "#18212b"; $("itemBorderWeight").value = "1"; $("itemIcon").value = "Heart";
       return;
     }
-    $("itemLabel").value = item.label; $("itemTag").value = item.tag; $("itemX").value = f.x; $("itemY").value = f.y; $("itemW").value = f.w; $("itemH").value = f.h; $("itemRadius").value = item.radius || 0; $("itemVisible").value = f.visible === false ? "no" : "yes"; $("itemText").value = item.text || "";
+    $("itemLabel").value = item.label; $("itemTag").value = item.tag; $("itemX").value = f.x; $("itemY").value = f.y; $("itemW").value = f.w; $("itemH").value = f.h; $("itemRadius").value = item.radius || 0; $("itemVisible").value = f.visible === false ? "no" : "yes"; $("itemText").value = item.text || ""; $("itemShowTitle").value = item.showTitle === false ? "no" : "yes"; $("itemBackgroundMode").value = item.backgroundMode || "color"; $("itemBackgroundColor").value = item.color || COLORS[0]; $("itemBorderMode").value = item.borderMode || "color"; $("itemBorderColor").value = item.borderColor || "#18212b"; $("itemBorderWeight").value = item.borderWeight ?? 1; $("itemIcon").value = item.icon || "Heart";
   }
   function updateFrame(patch){
     const item = selected(); if (!item) return;
@@ -312,7 +330,7 @@
   }
   function addItem(seed={}){
     const p = current(), pageData = p.pages[bp], size = Math.max(p.grid * 5, Math.min(320, pageData.w * .24));
-    const item = {id:uid(),label:`div ${p.items.length + 1}`,tag:"div",color:COLORS[p.items.length % COLORS.length],radius:6,frames:{},...seed};
+    const item = {id:uid(),label:`div ${p.items.length + 1}`,tag:"div",color:COLORS[p.items.length % COLORS.length],backgroundMode:"color",borderMode:"color",borderColor:"#18212b",borderWeight:1,showTitle:true,icon:"Heart",radius:6,frames:{},...seed};
     item.frames[bp] = {x:0,y:0,w:Math.round(size),h:Math.round(size*.55),visible:true,...(seed.frames?.[bp] || {})};
     p.items.push(item); selectedId = item.id; saveSoon(); render();
   }
@@ -363,11 +381,11 @@
   }
   function renderCode(){
     const p = current();
-    const html = p.items.map(item => `  <${item.tag} class="${slug(item.label)}">${esc(itemText(item))}</${item.tag}>`).join("\n");
+    const html = p.items.map(item => item.tag === "icon" ? `  <i class="${slug(item.label)}" data-lucide="${iconName(item.icon)}"></i>` : `  <${item.tag} class="${slug(item.label)}">${esc(exportContent(item))}</${item.tag}>`).join("\n");
     let css = `.wireframe {\n  position: relative;\n  width: 100%;\n  min-height: ${p.pages.desktop.h}px;\n}\n.wireframe > * {\n  position: absolute;\n  box-sizing: border-box;\n}\n`;
     for (const item of p.items){
       const f = frame(item,"desktop");
-      css += `.${slug(item.label)} { left: ${f.x}px; top: ${f.y}px; width: ${f.w}px; height: ${f.h}px; background: ${item.color}; border-radius: ${item.radius || 0}px;${f.visible === false ? " display: none;" : ""} }\n`;
+      css += `.${slug(item.label)} { left: ${f.x}px; top: ${f.y}px; width: ${f.w}px; height: ${f.h}px; background: ${item.backgroundMode === "transparent" ? "transparent" : (item.color || COLORS[0])}; border: ${item.borderMode === "none" ? 0 : (item.borderWeight ?? 1)}px solid ${item.borderColor || "#18212b"}; border-radius: ${item.radius || 0}px;${f.visible === false ? " display: none;" : ""} }\n`;
     }
     for (const id of ["tablet","mobile"]){
       const pageData = p.pages[id];
@@ -403,6 +421,13 @@
   $("itemLabel").addEventListener("input", e => { const item = selected(); if (!item) return; item.label = e.target.value; saveSoon(); renderBlocks(); renderList(); renderCode(); });
   $("itemTag").addEventListener("change", e => updateItem({tag:e.target.value}));
   $("itemText").addEventListener("input", e => { const item = selected(); if (!item) return; item.text = e.target.value; saveSoon(); renderBlocks(); renderCode(); });
+  $("itemShowTitle").addEventListener("change", e => updateItem({showTitle:e.target.value === "yes"}));
+  $("itemBackgroundMode").addEventListener("change", e => updateItem({backgroundMode:e.target.value}));
+  $("itemBackgroundColor").addEventListener("input", e => updateItem({color:e.target.value,backgroundMode:"color"}));
+  $("itemBorderMode").addEventListener("change", e => updateItem({borderMode:e.target.value}));
+  $("itemBorderColor").addEventListener("input", e => updateItem({borderColor:e.target.value,borderMode:"color"}));
+  $("itemBorderWeight").addEventListener("change", e => updateItem({borderWeight:Math.max(0, Number(e.target.value) || 0),borderMode:"color"}));
+  $("itemIcon").addEventListener("change", e => updateItem({icon:e.target.value}));
   $("itemX").addEventListener("change", e => updateFrame({x:snapValue(Number(e.target.value) || 0)}));
   $("itemY").addEventListener("change", e => updateFrame({y:snapValue(Number(e.target.value) || 0)}));
   $("itemW").addEventListener("change", e => updateFrame({w:snapValue(Number(e.target.value) || 1)}));
@@ -411,7 +436,7 @@
   $("itemVisible").addEventListener("change", e => updateFrame({visible:e.target.value === "yes"}));
   $("duplicateItem").addEventListener("click", () => duplicateItem());
   $("deleteItem").addEventListener("click", deleteItem);
-  $("palette").addEventListener("click", e => { const btn = e.target.closest("[data-color]"); if (btn) updateItem({color:btn.dataset.color}); });
+  $("palette").addEventListener("click", e => { const btn = e.target.closest("[data-color]"); if (btn) updateItem({color:btn.dataset.color,backgroundMode:"color"}); });
   $("copyCode").addEventListener("click", async () => { try{ await navigator.clipboard.writeText($("code").value); show("Code copied"); }catch{ $("code").focus(); $("code").select(); show("Code selected"); } });
   page.addEventListener("pointerdown", startDrag);
   page.addEventListener("pointermove", moveDrag);
@@ -425,6 +450,7 @@
 
   selectedId = current().items[0]?.id || null;
   render();
+  window.addEventListener("load", render);
 })();
 </script>
 </body>
