@@ -37,7 +37,7 @@
     .palette{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}.colorBtn{height:28px;border-radius:8px;padding:0}.colorBtn.active{outline:2px solid var(--accent);outline-offset:2px}
     .metric{display:grid;grid-template-columns:1fr auto;gap:8px;font:12px var(--mono);color:var(--muted);padding:4px 0}.metric strong{color:var(--text);font-weight:700}
     .code{height:260px;white-space:pre;overflow:auto;color:#d7e1ea}
-    .mobilePanels{display:none}.scrim{display:none}.toast{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);background:rgba(17,21,27,.96);border:1px solid var(--border);padding:10px 13px;border-radius:999px;font:12px var(--mono);opacity:0;pointer-events:none;transition:.16s;z-index:10}.toast.show{opacity:1}
+    .mobilePanels{display:none}.mobileAdd{display:none}.scrim{display:none}.toast{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);background:rgba(17,21,27,.96);border:1px solid var(--border);padding:10px 13px;border-radius:999px;font:12px var(--mono);opacity:0;pointer-events:none;transition:.16s;z-index:10}.toast.show{opacity:1}
     @media(max-width:1120px){
       main{height:calc(100dvh - var(--header-h,62px));grid-template-columns:240px 1fr}
       .mobilePanels{display:flex;gap:6px}.mobilePanels button{height:36px}#toggleElements{display:none}
@@ -55,6 +55,8 @@
       .right{right:0;transform:translateX(105%)}.right.open{transform:translateX(0)}
       .viewport{min-width:0}.viewport #stage{padding:28px 20px 38px}.pageLabel{top:-30px;font-size:11px}.scrim{inset:var(--header-h,58px) 0 0}
       .panel{padding:12px}.fields{gap:9px}.field input,.field select{min-height:38px;font-size:16px}.actions button{min-height:40px}.tab{height:40px}.row{min-height:48px}.row button{height:32px}
+      .mobileAdd{display:flex;position:fixed;right:16px;bottom:16px;z-index:6;align-items:center;justify-content:center;min-height:48px;padding:10px 15px;border-color:#2a8aa0;background:#13242b;color:#d9fbff;box-shadow:0 8px 20px rgba(0,0,0,.38);font-size:13px}
+      .empty{cursor:pointer}
     }
   </style>
 </head>
@@ -147,6 +149,7 @@
 </main>
 
 <button id="panelScrim" class="scrim" aria-label="Close panel"></button>
+<button id="mobileAdd" class="mobileAdd" aria-label="Add a new div">+ Add div</button>
 <div id="toast" class="toast"></div>
 
 <script>
@@ -240,7 +243,13 @@
     const pageData = current().pages[bp] || breakpoint();
     const availableW = Math.max(240, viewport.clientWidth - 110);
     const availableH = Math.max(220, viewport.clientHeight - 110);
-    ppu = Math.max(.18, Math.min(availableW / pageData.w, availableH / pageData.h) * zoom);
+    const isPhone = window.matchMedia("(max-width: 760px)").matches;
+    // On phones, use the available width and allow vertical scrolling. Fitting the
+    // complete page height made a mobile wireframe unnecessarily small.
+    const scaleTo = isPhone
+      ? Math.max(240, viewport.clientWidth - 40) / pageData.w
+      : Math.min(availableW / pageData.w, availableH / pageData.h);
+    ppu = Math.max(.18, scaleTo * zoom);
     page.style.width = `${pageData.w * ppu}px`;
     page.style.height = `${pageData.h * ppu}px`;
     page.style.setProperty("--grid", `${Math.max(4, current().grid * ppu)}px`);
@@ -376,6 +385,7 @@
   $("duplicateProject").addEventListener("click", () => { const copy = structuredClone(current()); copy.id = uid(); copy.name = `${copy.name || "Untitled wireframe"} copy`; copy.items.forEach(i => i.id = uid()); state.projects.unshift(copy); currentId = copy.id; selectedId = copy.items[0]?.id || null; saveSoon(); render(); });
   $("deleteProject").addEventListener("click", () => { if (state.projects.length === 1) return show("Keep at least one wireframe"); if (!confirm(`Delete "${current().name || "Untitled wireframe"}"?`)) return; state.projects = state.projects.filter(p => p.id !== currentId); currentId = state.projects[0].id; selectedId = current().items[0]?.id || null; saveSoon(); render(); });
   $("addBlock").addEventListener("click", () => addItem());
+  $("mobileAdd").addEventListener("click", () => { setPanel(null); addItem(); show("Div added"); });
   $("copyBreakpoint").addEventListener("click", copyBreakpoint);
   $("fitView").addEventListener("click", fit);
   $("toggleElements").addEventListener("click", () => setPanel($("elementsPanel").classList.contains("open") ? null : "elements"));
@@ -403,6 +413,7 @@
   page.addEventListener("pointermove", moveDrag);
   page.addEventListener("pointerup", e => { if (drag && e.pointerId === drag.pointerId) drag = null; });
   page.addEventListener("pointercancel", e => { if (drag && e.pointerId === drag.pointerId) drag = null; });
+  $("empty").addEventListener("click", () => addItem());
   page.addEventListener("click", e => { if (e.target === page){ selectedId = null; render(); } });
   viewport.addEventListener("wheel", e => { if (!e.ctrlKey && !e.metaKey) return; e.preventDefault(); zoom = clamp(zoom + (e.deltaY < 0 ? .1 : -.1), .35, 3); calculateScale(); renderBlocks(); }, {passive:false});
   window.addEventListener("resize", () => { if (window.innerWidth > 1120) setPanel(null); render(); });
