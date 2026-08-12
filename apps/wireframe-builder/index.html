@@ -21,7 +21,7 @@
     main{height:calc(100vh - 62px);display:grid;grid-template-columns:280px 1fr 330px;min-height:0}
     aside{background:var(--panel2);overflow:auto}.left{border-right:1px solid var(--border)}.right{border-left:1px solid var(--border)}
     .panel{border-bottom:1px solid var(--border);padding:12px}.panelTitle{display:flex;align-items:center;gap:8px;margin-bottom:10px;font:12px var(--mono);color:var(--muted)}.panelTitle strong{color:var(--text);font-weight:700}.panelTitle span:last-child{margin-left:auto}
-    .fields{display:grid;grid-template-columns:1fr 1fr;gap:8px}.fields.one{grid-template-columns:1fr}.field label{display:block;margin-bottom:5px;font:11px var(--mono);color:var(--muted)}.field input,.field select,.field textarea{width:100%;background:rgba(0,0,0,.18)}.field textarea{height:160px;resize:vertical;padding:9px;line-height:1.45}
+    .fields{display:grid;grid-template-columns:1fr 1fr;gap:8px}.fields.one{grid-template-columns:1fr}.field label{display:block;margin-bottom:5px;font:11px var(--mono);color:var(--muted)}.field input,.field select,.field textarea{width:100%;background:rgba(0,0,0,.18)}.field textarea{height:160px;resize:vertical;padding:9px;line-height:1.45}.field.full{grid-column:1 / -1}.field.textInput textarea{height:96px}
     .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.actions button{flex:1 1 auto}
     .tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.tab{height:34px;padding:6px}.tab.active{border-color:#2a8aa0;background:#13242b;color:#d9fbff}
     .list{display:grid;gap:8px}.row{border:1px solid var(--border);background:var(--panel);border-radius:8px;padding:8px;display:grid;grid-template-columns:18px 1fr auto;gap:8px;align-items:center;cursor:pointer}.row.selected{border-color:#2a8aa0}.row.hidden{opacity:.5}.swatch{width:18px;height:18px;border-radius:5px;border:1px solid rgba(255,255,255,.25)}.row b{display:block;font:12px var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.row span{font:11px var(--mono);color:var(--muted)}.row button{height:28px;padding:4px 7px}
@@ -116,13 +116,14 @@
       <div class="panelTitle"><strong>Selection</strong><span id="selectionMeta"></span></div>
       <div class="fields">
         <div class="field"><label>Name</label><input id="itemLabel"></div>
-        <div class="field"><label>Tag</label><select id="itemTag"><option>div</option><option>header</option><option>main</option><option>section</option><option>nav</option><option>aside</option><option>footer</option><option>button</option></select></div>
+        <div class="field"><label>Tag</label><select id="itemTag"><option>div</option><option>p</option><option>header</option><option>main</option><option>section</option><option>nav</option><option>aside</option><option>footer</option><option>button</option></select></div>
         <div class="field"><label>X</label><input id="itemX" type="number" step="1"></div>
         <div class="field"><label>Y</label><input id="itemY" type="number" step="1"></div>
         <div class="field"><label>Width</label><input id="itemW" type="number" min="1" step="1"></div>
         <div class="field"><label>Height</label><input id="itemH" type="number" min="1" step="1"></div>
         <div class="field"><label>Radius</label><input id="itemRadius" type="number" min="0" step="1"></div>
         <div class="field"><label>Visible</label><select id="itemVisible"><option value="yes">Yes</option><option value="no">No</option></select></div>
+        <div class="field full textInput" id="itemTextField" hidden><label>Text</label><textarea id="itemText" placeholder="Write paragraph text…"></textarea></div>
       </div>
       <div class="actions">
         <button id="duplicateItem">Duplicate</button>
@@ -205,6 +206,7 @@
     return {x:Math.round(source.x * to.w / from.w),y:Math.round(source.y * to.h / from.h),w:Math.round(source.w * to.w / from.w),h:Math.round(source.h * to.h / from.h),visible:source.visible !== false};
   }
   function itemName(item){ return item.label.trim() || item.tag || "div"; }
+  function itemText(item){ return item.tag === "p" ? (item.text || "Paragraph text") : itemName(item); }
   function renderPicker(){
     $("projectSelect").innerHTML = state.projects.map(p => `<option value="${p.id}"${p.id === currentId ? " selected" : ""}>${esc(p.name || "Untitled wireframe")}</option>`).join("");
   }
@@ -265,7 +267,7 @@
       el.dataset.id = item.id;
       el.style.left = `${f.x * ppu}px`; el.style.top = `${f.y * ppu}px`; el.style.width = `${f.w * ppu}px`; el.style.height = `${f.h * ppu}px`;
       el.style.setProperty("--block", item.color || COLORS[0]); el.style.setProperty("--radius", `${item.radius || 0}px`);
-      el.innerHTML = `<div class="body"><b>${esc(itemName(item))}</b><span>${item.tag} - ${f.w} x ${f.h}</span></div><div class="handle"></div>`;
+      el.innerHTML = `<div class="body"><b>${esc(itemText(item))}</b><span>${item.tag} - ${f.w} x ${f.h}</span></div><div class="handle"></div>`;
       page.appendChild(el);
     }
     $("elementMetric").textContent = p.items.length;
@@ -284,14 +286,15 @@
   function renderInspector(){
     const item = selected(), f = item ? frame(item) : null;
     $("selectionMeta").textContent = item ? `${item.tag} - ${f.w} x ${f.h}` : "None";
-    for (const id of ["itemLabel","itemTag","itemX","itemY","itemW","itemH","itemRadius","itemVisible"]) $(id).disabled = !item;
+    for (const id of ["itemLabel","itemTag","itemX","itemY","itemW","itemH","itemRadius","itemVisible","itemText"]) $(id).disabled = !item;
     for (const id of ["duplicateItem","deleteItem"]) $(id).disabled = !item;
+    $("itemTextField").hidden = !item || item.tag !== "p";
     document.querySelectorAll(".colorBtn").forEach(btn => btn.classList.toggle("active", item && btn.dataset.color === item.color));
     if (!item){
-      $("itemLabel").value = ""; $("itemTag").value = "div"; $("itemX").value = ""; $("itemY").value = ""; $("itemW").value = ""; $("itemH").value = ""; $("itemRadius").value = ""; $("itemVisible").value = "yes";
+      $("itemLabel").value = ""; $("itemTag").value = "div"; $("itemX").value = ""; $("itemY").value = ""; $("itemW").value = ""; $("itemH").value = ""; $("itemRadius").value = ""; $("itemVisible").value = "yes"; $("itemText").value = "";
       return;
     }
-    $("itemLabel").value = item.label; $("itemTag").value = item.tag; $("itemX").value = f.x; $("itemY").value = f.y; $("itemW").value = f.w; $("itemH").value = f.h; $("itemRadius").value = item.radius || 0; $("itemVisible").value = f.visible === false ? "no" : "yes";
+    $("itemLabel").value = item.label; $("itemTag").value = item.tag; $("itemX").value = f.x; $("itemY").value = f.y; $("itemW").value = f.w; $("itemH").value = f.h; $("itemRadius").value = item.radius || 0; $("itemVisible").value = f.visible === false ? "no" : "yes"; $("itemText").value = item.text || "";
   }
   function updateFrame(patch){
     const item = selected(); if (!item) return;
@@ -360,7 +363,7 @@
   }
   function renderCode(){
     const p = current();
-    const html = p.items.map(item => `  <${item.tag} class="${slug(item.label)}">${esc(itemName(item))}</${item.tag}>`).join("\n");
+    const html = p.items.map(item => `  <${item.tag} class="${slug(item.label)}">${esc(itemText(item))}</${item.tag}>`).join("\n");
     let css = `.wireframe {\n  position: relative;\n  width: 100%;\n  min-height: ${p.pages.desktop.h}px;\n}\n.wireframe > * {\n  position: absolute;\n  box-sizing: border-box;\n}\n`;
     for (const item of p.items){
       const f = frame(item,"desktop");
@@ -399,6 +402,7 @@
   $("snap").addEventListener("change", e => { current().snap = e.target.value === "on"; saveSoon(); render(); });
   $("itemLabel").addEventListener("input", e => { const item = selected(); if (!item) return; item.label = e.target.value; saveSoon(); renderBlocks(); renderList(); renderCode(); });
   $("itemTag").addEventListener("change", e => updateItem({tag:e.target.value}));
+  $("itemText").addEventListener("input", e => { const item = selected(); if (!item) return; item.text = e.target.value; saveSoon(); renderBlocks(); renderCode(); });
   $("itemX").addEventListener("change", e => updateFrame({x:snapValue(Number(e.target.value) || 0)}));
   $("itemY").addEventListener("change", e => updateFrame({y:snapValue(Number(e.target.value) || 0)}));
   $("itemW").addEventListener("change", e => updateFrame({w:snapValue(Number(e.target.value) || 1)}));
